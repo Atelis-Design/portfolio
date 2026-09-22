@@ -1,0 +1,183 @@
+---
+import { Image } from 'astro:assets';
+import wordmark from '../assets/brand/wordmark.png';
+import { SITE } from '../data';
+import type { Locale } from '../i18n/locales';
+import { localizedPath, type RouteKey } from '../i18n/routes';
+import { useUi } from '../i18n/ui';
+import LanguageSwitcher from './LanguageSwitcher.astro';
+
+interface Props {
+  locale: Locale;
+  path: string;
+  current: RouteKey | null;
+}
+
+const { locale, path, current } = Astro.props;
+const ui = useUi(locale);
+const items: RouteKey[] = ['projects', 'services', 'about', 'contact'];
+---
+
+<header class="site-header">
+  <div class="site-header__inner container">
+    <a class="site-header__brand" href={localizedPath(locale, 'home')} aria-current={current === 'home' ? 'page' : undefined}>
+      <Image
+        src={wordmark}
+        alt={SITE.brand}
+        widths={[240, 480]}
+        sizes="(min-width: 64em) 220px, 170px"
+        format="webp"
+        loading="eager"
+        class="site-header__wordmark"
+      />
+    </a>
+
+    <nav class="site-header__nav" aria-label={ui.a11y.primaryNav}>
+      <ul role="list">
+        {
+          items.map((item) => (
+            <li>
+              <a href={localizedPath(locale, item)} aria-current={current === item ? 'page' : undefined}>
+                {ui.nav[item]}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <span class="site-header__sep" aria-hidden="true"></span>
+
+    <div class="site-header__lang">
+      <LanguageSwitcher locale={locale} path={path} />
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    font-family: var(--font-brand);
+    border-bottom: var(--rule);
+  }
+
+  .site-header__inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'brand lang'
+      'nav nav';
+    align-items: center;
+  }
+
+  .site-header__brand {
+    grid-area: brand;
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    min-height: 3.5rem;
+  }
+
+  .site-header__wordmark {
+    width: clamp(150px, 42vw, 170px);
+    height: auto;
+  }
+
+  .site-header__lang {
+    grid-area: lang;
+  }
+
+  /* Divider between nav and language: explicit height, centred on the header row,
+     equal gap on both sides (desktop only). */
+  .site-header__sep {
+    display: none;
+  }
+
+  .site-header__nav {
+    grid-area: nav;
+    border-top: var(--rule);
+  }
+
+  .site-header__nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    column-gap: var(--space-md);
+  }
+
+  .site-header__nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    font-family: var(--font-brand);
+    font-size: var(--text-xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--color-text-secondary);
+    background: linear-gradient(currentColor, currentColor) no-repeat 0 calc(100% - 0.7rem) / 0 1px;
+    transition:
+      background-size var(--duration-fast) var(--ease),
+      color var(--duration-fast) var(--ease);
+  }
+
+  .site-header__nav a:hover,
+  .site-header__nav a[aria-current='page'] {
+    color: var(--color-text-primary);
+    background-size: 100% 1px;
+  }
+
+  @media (max-width: 23.99em) {
+    .site-header__nav ul {
+      column-gap: var(--space-sm);
+    }
+
+    .site-header__nav a {
+      font-size: var(--text-2xs);
+      letter-spacing: 0.03em;
+    }
+  }
+
+  @media (min-width: 48em) {
+    .site-header__nav a {
+      font-size: var(--text-sm);
+      letter-spacing: 0.1em;
+    }
+  }
+
+  @media (min-width: 48em) {
+    .site-header__inner {
+      grid-template-columns: auto 1fr auto auto;
+      grid-template-areas: 'brand nav sep lang';
+      column-gap: var(--space-lg);
+      min-height: var(--header-height);
+    }
+
+    .site-header__wordmark {
+      width: 190px;
+    }
+
+    .site-header__nav {
+      border-top: 0;
+      justify-self: end;
+    }
+
+    .site-header__nav ul {
+      column-gap: var(--space-lg);
+    }
+
+    .site-header__sep {
+      grid-area: sep;
+      display: block;
+      align-self: center;
+      width: 1px;
+      height: 2rem;
+      background: var(--color-rule);
+    }
+  }
+
+  @media (min-width: 64em) {
+    .site-header__wordmark {
+      width: 220px;
+    }
+  }
+</style>

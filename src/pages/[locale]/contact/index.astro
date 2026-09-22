@@ -1,0 +1,79 @@
+---
+import ContactDetails from '../../../components/ContactDetails.astro';
+import Photo from '../../../components/Photo.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { CONTACT, getProjectSummary, localize, viewImage } from '../../../data';
+import { localeStaticPaths, type Locale } from '../../../i18n/locales';
+import { localizedPath } from '../../../i18n/routes';
+import { useUi } from '../../../i18n/ui';
+
+export const getStaticPaths = localeStaticPaths;
+
+const locale = Astro.params.locale as Locale;
+const ui = useUi(locale);
+const imageProject = getProjectSummary(CONTACT.image.projectId, locale);
+const image = viewImage(CONTACT.image.image, locale, imageProject?.title ?? '');
+---
+
+<BaseLayout
+  locale={locale}
+  title={ui.nav.contact}
+  description={localize(CONTACT.meta.description, locale)}
+  current="contact"
+>
+  <header class="page-intro container grid">
+    <h1 class="page-intro__title">{ui.nav.contact}</h1>
+    <p class="page-intro__lead statement">{localize(CONTACT.lead, locale)}</p>
+  </header>
+
+  <section class="contact container grid" aria-label={ui.nav.contact}>
+    <div class="contact__details">
+      <ContactDetails locale={locale} />
+      <div class="contact__inquiry">
+        <p class="prose">{localize(CONTACT.body, locale)}</p>
+        <a class="link-arrow" href={localizedPath(locale, 'services', 'inquiry')}>{ui.services.inquiry}</a>
+      </div>
+    </div>
+    <figure class="contact__image">
+      <Photo image={image} sizes="(min-width: 64em) 40vw, 100vw" />
+    </figure>
+  </section>
+</BaseLayout>
+
+<style>
+  .contact {
+    row-gap: var(--space-xl);
+  }
+
+  .contact__details {
+    display: grid;
+    gap: var(--space-xl);
+    align-content: start;
+  }
+
+  .contact__inquiry {
+    display: grid;
+    gap: var(--space-md);
+    justify-items: start;
+  }
+
+  .contact__image :global(img) {
+    width: 100%;
+  }
+
+  @media (min-width: 40em) and (max-width: 63.99em) {
+    .contact__image {
+      grid-column: 5 / span 8;
+    }
+  }
+
+  @media (min-width: 64em) {
+    .contact__details {
+      grid-column: 1 / span 5;
+    }
+
+    .contact__image {
+      grid-column: 8 / span 5;
+    }
+  }
+</style>

@@ -1,0 +1,35 @@
+---
+/**
+ * Responsive photograph. Generates WebP derivatives at build time from the
+ * repo working copies; width/height are always emitted to prevent layout shift.
+ * `priority` is for the single above-the-fold LCP image on a page.
+ */
+import { Image } from 'astro:assets';
+import type { ViewImage } from '../data';
+import { IMAGE_FORMAT, IMAGE_QUALITY, IMAGE_WIDTHS } from '../lib/images';
+
+interface Props {
+  image: ViewImage;
+  sizes: string;
+  priority?: boolean;
+  /** Load at low network priority (e.g. slides that are not initially visible). */
+  deferred?: boolean;
+  class?: string;
+}
+
+const { image, sizes, priority = false, deferred = false, class: className } = Astro.props;
+---
+
+<Image
+  src={image.src}
+  alt={image.alt}
+  widths={IMAGE_WIDTHS}
+  sizes={sizes}
+  format={IMAGE_FORMAT}
+  quality={IMAGE_QUALITY}
+  priority={priority}
+  loading={priority ? 'eager' : 'lazy'}
+  decoding={priority ? 'sync' : 'async'}
+  fetchpriority={deferred ? 'low' : undefined}
+  class={className}
+/>

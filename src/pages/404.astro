@@ -1,0 +1,71 @@
+---
+/**
+ * Single static 404 (hosts serve /404.html for every unknown path).
+ * Rendered in the default locale; a tiny script re-localizes it when the
+ * requested URL starts with a known locale, e.g. /de/unknown/ → German text.
+ */
+import UtilityPage from '../components/UtilityPage.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../data';
+import { DEFAULT_LOCALE } from '../i18n/locales';
+import { localizedPath } from '../i18n/routes';
+import { notFoundStrings, useUi } from '../i18n/ui';
+
+const ui = useUi(DEFAULT_LOCALE);
+const payload = { brand: SITE.brand, strings: notFoundStrings() };
+---
+
+<BaseLayout
+  locale={DEFAULT_LOCALE}
+  title={ui.notFound.title}
+  description={ui.notFound.text}
+  chrome={false}
+  alternates={false}
+  noindex
+>
+  <UtilityPage labelledBy="not-found-title">
+    <p class="not-found__code" aria-hidden="true">404</p>
+    <h1 class="not-found__title" id="not-found-title" data-nf="title">{ui.notFound.title}</h1>
+    <p class="not-found__text" data-nf="text">{ui.notFound.text}</p>
+    <a class="link-arrow" href={localizedPath(DEFAULT_LOCALE, 'home')} data-nf="back">{ui.notFound.back}</a>
+  </UtilityPage>
+  <script type="application/json" id="not-found-strings" set:html={JSON.stringify(payload)} />
+</BaseLayout>
+
+<script>
+  const data = document.getElementById('not-found-strings')?.textContent;
+  const locale = location.pathname.split('/').filter(Boolean)[0];
+  const { brand, strings } = data ? JSON.parse(data) : { brand: '', strings: {} };
+  const t = strings[locale];
+
+  if (t) {
+    document.documentElement.lang = locale;
+    document.title = `${t.title} — ${brand}`;
+    const set = (key: string, value: string) => {
+      const el = document.querySelector<HTMLElement>(`[data-nf="${key}"]`);
+      if (el) el.textContent = value;
+    };
+    set('title', t.title);
+    set('text', t.text);
+    set('back', t.back);
+    document.querySelector<HTMLAnchorElement>('[data-nf="back"]')?.setAttribute('href', `/${locale}/`);
+  }
+</script>
+
+<style>
+  .not-found__code {
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-meta);
+    color: var(--color-text-muted);
+  }
+
+  .not-found__title {
+    font-size: var(--text-2xl);
+  }
+
+  .not-found__text {
+    color: var(--color-text-secondary);
+    max-width: 36ch;
+  }
+</style>

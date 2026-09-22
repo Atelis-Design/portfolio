@@ -1,0 +1,198 @@
+---
+import Photo from '../../../components/Photo.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { PROJECTS_PAGE, getProjects, localize } from '../../../data';
+import { localeStaticPaths, type Locale } from '../../../i18n/locales';
+import { projectPath } from '../../../i18n/routes';
+import { useUi } from '../../../i18n/ui';
+import { imageSize } from '../../../lib/images';
+
+export const getStaticPaths = localeStaticPaths;
+
+const locale = Astro.params.locale as Locale;
+const ui = useUi(locale);
+const projects = await Promise.all(
+  getProjects(locale).map(async (project) => ({ ...project, portrait: (await imageSize(project.cover.src)).portrait })),
+);
+const pad = (n: number) => String(n).padStart(2, '0');
+---
+
+<BaseLayout
+  locale={locale}
+  title={ui.nav.projects}
+  description={localize(PROJECTS_PAGE.meta.description, locale)}
+  current="projects"
+>
+  <header class="page-intro container grid">
+    <h1 class="page-intro__title">{ui.nav.projects}</h1>
+    <p class="page-intro__lead prose">{localize(PROJECTS_PAGE.intro, locale)}</p>
+  </header>
+
+  <ol class="entries container" role="list">
+    {
+      projects.map((project, i) => {
+        const { portrait } = project;
+        const href = projectPath(locale, project.id);
+        return (
+          <li class:list={['entry grid', { 'entry--mirror': i % 2 === 1, 'entry--portrait': portrait }]}>
+            <div class="entry__media">
+              <Photo
+                image={project.cover}
+                sizes={portrait ? '(min-width: 64em) 40vw, 100vw' : '(min-width: 64em) 64vw, 100vw'}
+                priority={i === 0}
+              />
+            </div>
+            <div class="entry__text">
+              <p class="entry__index">
+                {pad(i + 1)} / {pad(projects.length)}
+              </p>
+              <h2 class="entry__title">
+                <a href={href}>{project.title}</a>
+              </h2>
+              {project.meta.length > 0 && (
+                <dl class="entry__meta">
+                  {project.meta.map((item) => (
+                    <div>
+                      <dt class="visually-hidden">{item.label}</dt>
+                      <dd>{item.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              <p class="entry__description">{project.shortDescription}</p>
+              <span class="entry__cta link-arrow" aria-hidden="true">
+                {ui.common.viewProject}
+              </span>
+            </div>
+          </li>
+        );
+      })
+    }
+  </ol>
+</BaseLayout>
+
+<style>
+  .entries {
+    display: grid;
+    gap: var(--space-section);
+  }
+
+  .entry {
+    row-gap: var(--space-md);
+    position: relative;
+  }
+
+  .entry__media {
+    display: block;
+    overflow: hidden;
+    background: var(--color-placeholder);
+  }
+
+  .entry__media :global(img) {
+    width: 100%;
+    transition: transform var(--duration-slow) var(--ease);
+  }
+
+  .entry:hover .entry__media :global(img) {
+    transform: scale(1.02);
+  }
+
+  .entry__text {
+    display: grid;
+    gap: var(--space-sm);
+    align-content: end;
+    justify-items: start;
+  }
+
+  .entry__index {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .entry__title {
+    font-size: var(--text-xl);
+  }
+
+  .entry__title a {
+    text-decoration: none;
+  }
+
+  /* Whole row is clickable via the title link; keeps a single tab stop per project. */
+  .entry__title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .entry:hover .entry__title a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.15em;
+  }
+
+  .entry__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-md);
+    font-size: var(--text-xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .entry__description {
+    max-width: 32ch;
+    color: var(--color-text-secondary);
+  }
+
+  .entry__cta {
+    margin-top: var(--space-xs);
+  }
+
+  @media (min-width: 40em) and (max-width: 63.99em) {
+    .entry--portrait .entry__media {
+      grid-column: 1 / span 8;
+    }
+  }
+
+  @media (min-width: 64em) {
+    .entry {
+      align-items: end;
+    }
+
+    .entry__media {
+      grid-column: 1 / span 8;
+      grid-row: 1;
+    }
+
+    .entry__text {
+      grid-column: 10 / span 3;
+      grid-row: 1;
+    }
+
+    .entry--portrait .entry__media {
+      grid-column: 2 / span 5;
+    }
+
+    .entry--portrait .entry__text {
+      grid-column: 8 / span 4;
+    }
+
+    .entry--mirror .entry__media {
+      grid-column: 5 / span 8;
+    }
+
+    .entry--mirror .entry__text {
+      grid-column: 1 / span 3;
+    }
+
+    .entry--mirror.entry--portrait .entry__media {
+      grid-column: 7 / span 5;
+    }
+
+    .entry--mirror.entry--portrait .entry__text {
+      grid-column: 2 / span 4;
+    }
+  }
+</style>

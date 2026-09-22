@@ -1,0 +1,25 @@
+---
+/**
+ * Root "/" is a language entry route, not a copy of the homepage.
+ * Phase 1: deterministic static redirect to DEFAULT_LOCALE (meta refresh),
+ * with plain language links as the visible fallback.
+ */
+import UtilityPage from '../components/UtilityPage.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../data';
+import { DEFAULT_LOCALE } from '../i18n/locales';
+import { localizedPath } from '../i18n/routes';
+import { useUi } from '../i18n/ui';
+
+const target = localizedPath(DEFAULT_LOCALE, 'home');
+const ui = useUi(DEFAULT_LOCALE);
+---
+
+<BaseLayout locale={DEFAULT_LOCALE} description={SITE.brand} chrome={false} alternates={false} noindex>
+  <Fragment slot="head">
+    <meta http-equiv="refresh" content={`0; url=${target}`} />
+  </Fragment>
+  <UtilityPage labelledBy="root-title">
+    <h1 class="eyebrow" id="root-title">{ui.root.chooseLanguage}</h1>
+  </UtilityPage>
+</BaseLayout>

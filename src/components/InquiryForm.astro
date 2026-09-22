@@ -1,0 +1,310 @@
+---
+/**
+ * Project inquiry form — VISUAL + SEMANTIC ONLY. NO BACKEND IS CONNECTED.
+ *
+ * Online submission is intentionally inactive in Phase 1:
+ *  - an availability notice is shown before the fields;
+ *  - the form has no `action`, and its only submit button is `disabled`, so
+ *    neither clicking nor pressing Enter (implicit submission) can submit it;
+ *  - no JavaScript is involved, and no data is sent anywhere.
+ * When a real endpoint is approved: add `action`/`method` and remove `disabled`.
+ */
+import type { Locale } from '../i18n/locales';
+import { localizedPath } from '../i18n/routes';
+import { useUi } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const ui = useUi(locale).form;
+
+const projectTypes = Object.entries(ui.projectTypes);
+const contactMethods = Object.entries(ui.contactMethods);
+---
+
+<form class="inquiry" data-inquiry-form data-backend="none" aria-describedby="inquiry-availability inquiry-required-note">
+  <p class="inquiry__availability" id="inquiry-availability">
+    {ui.unavailable}
+    <a href={localizedPath(locale, 'contact')}>{ui.contactLink}</a>
+  </p>
+  <p class="inquiry__note" id="inquiry-required-note">{ui.requiredNote}</p>
+
+  <div class="inquiry__grid">
+    <div class="field">
+      <label for="inq-name">{ui.fullName} <span aria-hidden="true">*</span></label>
+      <input id="inq-name" name="name" type="text" autocomplete="name" required />
+    </div>
+
+    <div class="field">
+      <label for="inq-email">{ui.email} <span aria-hidden="true">*</span></label>
+      <input id="inq-email" name="email" type="email" autocomplete="email" inputmode="email" required />
+    </div>
+
+    <div class="field">
+      <label for="inq-phone">{ui.phone}</label>
+      <input id="inq-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" />
+    </div>
+
+    <div class="field">
+      <label for="inq-type">{ui.projectType} <span aria-hidden="true">*</span></label>
+      <div class="select">
+        <select id="inq-type" name="projectType" required>
+          <option value="">{ui.selectPrompt}</option>
+          {projectTypes.map(([value, label]) => <option value={value}>{label}</option>)}
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="inq-location">{ui.location}</label>
+      <input id="inq-location" name="projectLocation" type="text" autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <label for="inq-area">{ui.area}</label>
+      <input id="inq-area" name="approximateArea" type="text" autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <label for="inq-budget">{ui.budget}</label>
+      <input id="inq-budget" name="estimatedBudget" type="text" autocomplete="off" aria-describedby="inq-budget-hint" />
+      <p class="field__hint" id="inq-budget-hint">{ui.budgetHint}</p>
+    </div>
+
+    <fieldset class="field field--choice">
+      <legend>{ui.preferredContact}</legend>
+      <div class="choices">
+        {
+          contactMethods.map(([value, label]) => (
+            <label class="choice">
+              <input type="radio" name="preferredContact" value={value} />
+              <span>{label}</span>
+            </label>
+          ))
+        }
+      </div>
+    </fieldset>
+
+    <div class="field field--full">
+      <label for="inq-message">{ui.message} <span aria-hidden="true">*</span></label>
+      <textarea id="inq-message" name="message" rows="6" required></textarea>
+    </div>
+
+    <div class="field field--full">
+      <label class="consent">
+        <input type="checkbox" name="consent" required />
+        <span>{ui.consent} <span aria-hidden="true">*</span></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="inquiry__actions">
+    <button class="button" type="submit" disabled aria-describedby="inquiry-submit-inactive">{ui.submit}</button>
+    <p class="inquiry__inactive" id="inquiry-submit-inactive">{ui.submitInactive}</p>
+  </div>
+</form>
+
+<style>
+  .inquiry {
+    display: grid;
+    gap: var(--space-lg);
+  }
+
+  .inquiry__note {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .inquiry__grid {
+    display: grid;
+    gap: var(--space-lg) var(--grid-gap);
+  }
+
+  @media (min-width: 40em) {
+    .inquiry__grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .field--full {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .field {
+    display: grid;
+    gap: var(--space-xs);
+    align-content: start;
+    min-width: 0;
+  }
+
+  .field > label:not(.consent),
+  .field legend {
+    font-size: var(--text-xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+
+  .field input[type='text'],
+  .field input[type='email'],
+  .field input[type='tel'],
+  .field select,
+  .field textarea {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.5rem 0;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--color-text-muted);
+    border-radius: 0;
+    font-size: var(--text-md);
+    color: var(--color-text-primary);
+    appearance: none;
+  }
+
+  .field textarea {
+    resize: vertical;
+    min-height: 8rem;
+    line-height: var(--leading-body);
+  }
+
+  .field input:focus-visible,
+  .field select:focus-visible,
+  .field textarea:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-bottom-color: var(--color-text-primary);
+  }
+
+  .select {
+    position: relative;
+  }
+
+  .select::after {
+    content: '';
+    position: absolute;
+    right: 0.25rem;
+    top: 50%;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-right: 1px solid currentColor;
+    border-bottom: 1px solid currentColor;
+    transform: translateY(-75%) rotate(45deg);
+    pointer-events: none;
+  }
+
+  .select select {
+    padding-right: 1.5rem;
+    cursor: pointer;
+  }
+
+  .field__hint {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .field--choice {
+    border: 0;
+    padding: 0;
+    min-inline-size: 0;
+  }
+
+  .field--choice legend {
+    padding: 0;
+    margin-bottom: var(--space-xs);
+  }
+
+  .choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-lg);
+  }
+
+  .choice,
+  .consent {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 2.75rem;
+    cursor: pointer;
+  }
+
+  .consent {
+    align-items: flex-start;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    min-height: 0;
+  }
+
+  .choice input,
+  .consent input {
+    flex: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+    accent-color: var(--color-text-primary);
+  }
+
+  .consent input {
+    margin-top: 0.2rem;
+  }
+
+  .inquiry__actions {
+    display: grid;
+    gap: var(--space-md);
+    justify-items: start;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3rem;
+    padding: 0 var(--space-lg);
+    background: var(--color-text-primary);
+    color: var(--color-surface-primary);
+    border: 1px solid var(--color-text-primary);
+    border-radius: 0;
+    font-size: var(--text-sm);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease),
+      color var(--duration-fast) var(--ease);
+  }
+
+  .button:hover:not(:disabled) {
+    background: transparent;
+    color: var(--color-text-primary);
+  }
+
+  /* Inactive submission (Phase 1): clearly not an available action */
+  .button:disabled {
+    background: transparent;
+    color: var(--color-text-muted);
+    border-color: var(--color-rule);
+    cursor: not-allowed;
+  }
+
+  .inquiry__inactive {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .inquiry__availability {
+    max-width: var(--measure);
+    padding: var(--space-sm) var(--space-md);
+    border-left: 2px solid var(--color-text-primary);
+    background: var(--color-surface-secondary);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .inquiry__availability a {
+    margin-left: 0.25em;
+    color: var(--color-text-primary);
+  }
+</style>

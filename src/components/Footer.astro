@@ -1,0 +1,221 @@
+---
+/**
+ * GLOBAL FOOTER — design-frozen. Used by every page through BaseLayout.
+ *
+ *   discipline — thin rule — Instagram · LinkedIn · Mail — © year brand
+ *
+ * Destinations come from SITE (src/data/site.ts); a channel without a value
+ * is simply not rendered, so there are never dead links.
+ */
+import { SITE } from '../data';
+import type { Locale } from '../i18n/locales';
+import { useUi } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const ui = useUi(locale);
+const year = new Date().getFullYear();
+
+const { instagram, linkedin } = SITE.social;
+const { email } = SITE.contact;
+
+type Icon = 'instagram' | 'linkedin' | 'mail';
+const channels = (
+  [
+    { icon: 'instagram', label: ui.contact.instagram, href: instagram },
+    { icon: 'linkedin', label: 'LinkedIn', href: linkedin },
+    { icon: 'mail', label: email ? `${ui.contact.email}: ${email}` : ui.contact.email, href: email ? `mailto:${email}` : null },
+  ] satisfies { icon: Icon; label: string; href: string | null }[]
+).filter((channel): channel is { icon: Icon; label: string; href: string } => Boolean(channel.href));
+---
+
+<footer class="site-footer">
+  <div class="site-footer__inner container">
+    <p class="site-footer__discipline">{ui.home.discipline}</p>
+    <span class="site-footer__rule" aria-hidden="true"></span>
+    {
+      channels.length > 0 && (
+        <span class="site-footer__sep" aria-hidden="true" />
+      )
+    }
+    {
+      channels.length > 0 && (
+        <ul class="site-footer__social" role="list">
+          {channels.map((channel) => (
+            <li>
+              <a
+                href={channel.href}
+                aria-label={channel.label}
+                target={channel.icon === 'mail' ? undefined : '_blank'}
+                rel={channel.icon === 'mail' ? undefined : 'noopener noreferrer'}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  {channel.icon === 'instagram' && (
+                    <>
+                      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+                      <circle cx="12" cy="12" r="4" />
+                      <circle cx="17.2" cy="6.8" r="0.9" class="dot" />
+                    </>
+                  )}
+                  {channel.icon === 'linkedin' && (
+                    <>
+                      <rect x="3.5" y="3.5" width="17" height="17" rx="2.5" />
+                      <path d="M8 10.5v6M8 7.5v.01M11.5 16.5v-6M11.5 13.2c0-1.7 1-2.9 2.5-2.9s2.5 1 2.5 2.8v3.4" />
+                    </>
+                  )}
+                  {channel.icon === 'mail' && (
+                    <>
+                      <rect x="3.5" y="5.5" width="17" height="13" rx="1.5" />
+                      <path d="M4 6.5l8 6.5 8-6.5" />
+                    </>
+                  )}
+                </svg>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+    <span class="site-footer__sep" aria-hidden="true"></span>
+    <p class="site-footer__brand">
+      <span class="visually-hidden">{ui.footer.rights}</span>
+      {/* Locale-independent uppercase: the brand must not follow Turkish İ/I casing. */}
+      © <span class="site-footer__year">{year}</span> {SITE.brand.toUpperCase()}
+    </p>
+  </div>
+</footer>
+
+<style>
+  /*
+   * One flex row with a single gap (--footer-gap) between every item:
+   *   discipline · rule · | · icons · | · © brand
+   * Separators are explicit elements of equal height, centred on the row.
+   * Icons keep 44px hit areas; the icon group is pulled out by the hit-area
+   * padding so the visible glyphs sit exactly one gap from each separator.
+   */
+  .site-footer {
+    --footer-gap: var(--space-lg);
+    --icon-size: 22px;
+    --icon-pad: calc((2.75rem - var(--icon-size)) / 2);
+    margin-top: var(--space-xl);
+    border-top: var(--rule);
+    font-family: var(--font-brand);
+    color: var(--color-text-primary);
+  }
+
+  /* Home (viewport shell): the footer sits directly under the full-bleed hero */
+  :global(.viewport-shell) .site-footer {
+    margin-top: 0;
+    border-top: 0;
+  }
+
+  .site-footer__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2xs) var(--footer-gap);
+    min-height: var(--footer-height);
+    padding-block: var(--space-sm);
+  }
+
+  .site-footer__discipline {
+    flex-basis: 100%;
+    font-size: var(--text-md);
+    line-height: 1;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .site-footer__rule,
+  .site-footer__sep {
+    display: none;
+    background: var(--color-rule);
+  }
+
+  .site-footer__social {
+    display: flex;
+    align-items: center;
+    margin-inline: calc(-1 * var(--icon-pad));
+  }
+
+  .site-footer__social a {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    color: var(--color-text-secondary);
+    transition: color var(--duration-fast) var(--ease);
+  }
+
+  .site-footer__social a:hover,
+  .site-footer__social a:focus-visible {
+    color: var(--color-text-primary);
+  }
+
+  .site-footer__social a:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: -6px;
+  }
+
+  .site-footer__social svg {
+    display: block;
+    width: var(--icon-size);
+    height: var(--icon-size);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .site-footer__social .dot {
+    fill: currentColor;
+    stroke: none;
+  }
+
+  .site-footer__brand {
+    margin-left: auto;
+    font-size: var(--text-xs);
+    line-height: 1;
+    letter-spacing: 0.12em;
+    color: var(--color-text-muted);
+  }
+
+  /* Year in the brand face with lining figures, so it sits level with the capitals */
+  .site-footer__year {
+    font-variant-numeric: lining-nums;
+  }
+
+  @media (min-width: 48em) {
+    .site-footer__inner {
+      flex-wrap: nowrap;
+      padding-block: 0;
+    }
+
+    .site-footer__discipline {
+      flex-basis: auto;
+    }
+
+    .site-footer__rule {
+      display: block;
+      flex: 1;
+      height: 1px;
+    }
+
+    .site-footer__sep {
+      display: block;
+      flex: none;
+      width: 1px;
+      height: 1.5rem;
+    }
+
+    .site-footer__brand {
+      margin-left: 0;
+      font-size: var(--text-sm);
+      letter-spacing: var(--tracking-meta);
+    }
+  }
+</style>

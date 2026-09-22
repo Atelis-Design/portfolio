@@ -1,0 +1,128 @@
+---
+/**
+ * Disclosure-based language selector: a native <details> with plain links,
+ * so it works without JavaScript. A small script adds Escape / outside-click closing.
+ */
+import { LOCALES, LOCALE_NAMES, type Locale } from '../i18n/locales';
+import { switchLocalePath } from '../i18n/routes';
+import { useUi } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+  path: string;
+}
+
+const { locale, path } = Astro.props;
+const ui = useUi(locale);
+---
+
+<details class="lang" data-lang-switcher>
+  <summary class="lang__toggle">
+    <span aria-hidden="true">{locale.toUpperCase()}</span>
+    <span class="visually-hidden">{ui.a11y.language}: {LOCALE_NAMES[locale]}</span>
+    <svg class="lang__chevron" width="9" height="6" viewBox="0 0 9 6" aria-hidden="true" focusable="false">
+      <path d="M1 1l3.5 3.5L8 1" fill="none" stroke="currentColor" stroke-width="1.1"></path>
+    </svg>
+  </summary>
+  <ul class="lang__list" role="list">
+    {
+      LOCALES.map((code) => (
+        <li>
+          <a
+            href={switchLocalePath(path, code)}
+            lang={code}
+            hreflang={code}
+            aria-current={code === locale ? 'true' : undefined}
+          >
+            {LOCALE_NAMES[code]}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</details>
+
+<script>
+  const switchers = document.querySelectorAll<HTMLDetailsElement>('[data-lang-switcher]');
+
+  switchers.forEach((details) => {
+    const summary = details.querySelector('summary');
+
+    details.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && details.open) {
+        details.open = false;
+        summary?.focus();
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (details.open && !details.contains(event.target as Node)) details.open = false;
+    });
+
+    details.addEventListener('focusout', (event) => {
+      if (details.open && !details.contains(event.relatedTarget as Node | null)) details.open = false;
+    });
+  });
+</script>
+
+<style>
+  .lang {
+    position: relative;
+  }
+
+  .lang__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    min-height: 2.75rem;
+    padding-inline: 0;
+    font-family: var(--font-brand);
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-meta);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+
+  .lang__toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  .lang__chevron {
+    transition: transform var(--duration-fast) var(--ease);
+  }
+
+  .lang[open] .lang__chevron {
+    transform: rotate(180deg);
+  }
+
+  .lang__list {
+    position: absolute;
+    top: calc(100% + var(--space-xs));
+    right: 0;
+    z-index: 20;
+    min-width: 11rem;
+    padding: var(--space-xs) 0;
+    background: var(--color-surface-primary);
+    border: var(--rule);
+  }
+
+  .lang__list a {
+    display: block;
+    padding: 0.55rem var(--space-md);
+    font-family: var(--font-brand);
+    font-size: var(--text-md);
+    text-decoration: none;
+    color: var(--color-text-secondary);
+  }
+
+  .lang__list a:hover {
+    color: var(--color-text-primary);
+    background: var(--color-surface-secondary);
+  }
+
+  .lang__list a[aria-current='true'] {
+    color: var(--color-text-primary);
+    text-decoration: underline;
+  }
+</style>
