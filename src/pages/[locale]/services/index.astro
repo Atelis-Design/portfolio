@@ -1,0 +1,191 @@
+---
+import InquiryForm from '../../../components/InquiryForm.astro';
+import Photo from '../../../components/Photo.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { SERVICES, getProjectSummary, localize, viewImage } from '../../../data';
+import { localeStaticPaths, type Locale } from '../../../i18n/locales';
+import { useUi } from '../../../i18n/ui';
+
+export const getStaticPaths = localeStaticPaths;
+
+const locale = Astro.params.locale as Locale;
+const ui = useUi(locale);
+const pad = (n: number) => String(n).padStart(2, '0');
+
+const imageProject = getProjectSummary(SERVICES.image.projectId, locale);
+const image = viewImage(SERVICES.image.image, locale, imageProject?.title ?? '');
+---
+
+<BaseLayout
+  locale={locale}
+  title={ui.nav.services}
+  description={localize(SERVICES.meta.description, locale)}
+  current="services"
+>
+  <header class="page-intro container grid">
+    <h1 class="page-intro__title">{ui.nav.services}</h1>
+    <p class="page-intro__lead statement">{localize(SERVICES.lead, locale)}</p>
+  </header>
+
+  <figure class="services-image container">
+    <Photo image={image} sizes="(min-width: 110em) 1700px, 100vw" priority />
+  </figure>
+
+  <section class="section container grid areas" aria-labelledby="areas-title">
+    <h2 class="areas__label eyebrow" id="areas-title">{ui.services.areas}</h2>
+    <ol class="areas__list" role="list">
+      {
+        SERVICES.areas.map((area, i) => (
+          <li class="area">
+            <span class="area__index">{pad(i + 1)}</span>
+            <h3 class="area__title">{localize(area.title, locale)}</h3>
+            <p class="area__text">{localize(area.text, locale)}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section class="approach surface-secondary" aria-labelledby="approach-title">
+    <div class="section container grid">
+      <h2 class="approach__label eyebrow" id="approach-title">{ui.services.approach}</h2>
+      <ol class="approach__list" role="list">
+        {
+          SERVICES.approach.map((step, i) => (
+            <li class="step">
+              <span class="step__index">{pad(i + 1)}</span>
+              <h3 class="step__title">{localize(step.title, locale)}</h3>
+              <p class="step__text">{localize(step.text, locale)}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="inquiry-section section container grid" id="inquiry" aria-labelledby="inquiry-title">
+    <div class="inquiry-section__intro">
+      <h2 class="display" id="inquiry-title">{ui.services.inquiry}</h2>
+      <p class="prose">{localize(SERVICES.inquiryIntro, locale)}</p>
+    </div>
+    <div class="inquiry-section__form">
+      <InquiryForm locale={locale} />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .services-image :global(img) {
+    width: 100%;
+  }
+
+  /* Areas of practice */
+  .areas {
+    row-gap: var(--space-lg);
+  }
+
+  .area {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: var(--space-xs) var(--grid-gap);
+    padding-block: var(--space-lg);
+    border-top: var(--rule);
+  }
+
+  .area:last-child {
+    border-bottom: var(--rule);
+  }
+
+  .area__index,
+  .step__index {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    padding-top: 0.5em;
+  }
+
+  .area__title {
+    font-size: var(--text-lg);
+  }
+
+  .area__text {
+    grid-column: 2;
+    max-width: 44ch;
+    color: var(--color-text-secondary);
+  }
+
+  @media (min-width: 64em) {
+    .areas__label {
+      grid-column: 1 / span 3;
+    }
+
+    .areas__list {
+      grid-column: 4 / span 9;
+    }
+
+    .area {
+      grid-template-columns: 3rem 1fr 1fr;
+    }
+
+    .area__text {
+      grid-column: 3;
+    }
+  }
+
+  /* Approach */
+  .approach .grid {
+    row-gap: var(--space-xl);
+  }
+
+  .approach__list {
+    display: grid;
+    gap: var(--space-xl) var(--grid-gap);
+  }
+
+  .step {
+    display: grid;
+    gap: var(--space-sm);
+    align-content: start;
+    padding-top: var(--space-md);
+    border-top: var(--rule);
+  }
+
+  .step__title {
+    font-size: var(--text-lg);
+  }
+
+  .step__text {
+    color: var(--color-text-secondary);
+  }
+
+  @media (min-width: 48em) {
+    .approach__list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* Inquiry */
+  .inquiry-section {
+    row-gap: var(--space-xl);
+    scroll-margin-top: var(--space-md);
+  }
+
+  .inquiry-section__intro {
+    display: grid;
+    gap: var(--space-md);
+    align-content: start;
+  }
+
+  @media (min-width: 64em) {
+    .inquiry-section__intro {
+      grid-column: 1 / span 4;
+      position: sticky;
+      top: var(--space-lg);
+      align-self: start;
+    }
+
+    .inquiry-section__form {
+      grid-column: 6 / span 7;
+    }
+  }
+</style>

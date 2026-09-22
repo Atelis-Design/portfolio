@@ -1,0 +1,86 @@
+---
+/** Minimal centred shell for the root language entry and the 404 page. */
+import { Image } from 'astro:assets';
+import wordmark from '../assets/brand/wordmark.png';
+import { SITE } from '../data';
+import { LOCALES, LOCALE_NAMES } from '../i18n/locales';
+import { localizedPath, rootPath } from '../i18n/routes';
+
+interface Props {
+  labelledBy: string;
+}
+
+const { labelledBy } = Astro.props;
+---
+
+<section class="utility container" aria-labelledby={labelledBy}>
+  <a class="utility__brand" href={rootPath()}>
+    <Image src={wordmark} alt={SITE.brand} widths={[240, 480]} sizes="220px" format="webp" loading="eager" />
+  </a>
+  <div class="utility__body">
+    <slot />
+  </div>
+  <ul class="utility__langs" role="list">
+    {
+      LOCALES.map((code) => (
+        <li>
+          <a href={localizedPath(code, 'home')} lang={code} hreflang={code}>
+            {LOCALE_NAMES[code]}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<style>
+  .utility {
+    min-height: 100vh;
+    min-height: 100svh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--space-xl);
+    padding-block: var(--space-lg);
+  }
+
+  .utility__brand {
+    justify-self: start;
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+  }
+
+  .utility__brand :global(img) {
+    width: 200px;
+  }
+
+  .utility__body {
+    align-self: center;
+    display: grid;
+    gap: var(--space-md);
+    justify-items: start;
+    max-width: 40rem;
+  }
+
+  .utility__langs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-lg);
+    padding-top: var(--space-md);
+    border-top: var(--rule);
+    font-size: var(--text-sm);
+  }
+
+  .utility__langs a {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    text-decoration: none;
+    color: var(--color-text-secondary);
+  }
+
+  .utility__langs a:hover {
+    color: var(--color-text-primary);
+    text-decoration: underline;
+  }
+</style>

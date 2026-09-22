@@ -1,0 +1,70 @@
+/* Design tokens — the only place raw colour values live. */
+:root {
+  /* Approved palette */
+  --color-surface-primary: #e0d7cf;
+  --color-surface-secondary: #ded4ca;
+  --color-text-primary: #271c14;
+  --color-text-secondary: #4b3528;
+  --color-text-muted: #6b574d;
+  --color-divider: #dacec4;
+
+  /* Derived from the palette (no new hues) */
+  --color-rule: color-mix(in srgb, var(--color-text-primary) 18%, transparent);
+  --color-placeholder: color-mix(in srgb, var(--color-text-primary) 6%, var(--color-surface-secondary));
+  --color-focus: var(--color-text-primary);
+
+  /*
+   * Brand typeface (client-approved): Cormorant Garamond 400, self-hosted (src/styles/fonts.ts).
+   * The global shell (header, footer) and Home use --font-brand for every role.
+   * --font-body / --font-nav / --font-meta / --font-caption remain the temporary
+   * system stack for page bodies not yet reviewed.
+   */
+  --font-brand: 'Cormorant Garamond', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  /* Digits only (IBM Plex Sans 400), then the brand face: for counters and small numeric UI. */
+  --font-numeric: 'Atelis Numerals', var(--font-brand);
+  --font-display: var(--font-brand);
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-nav: var(--font-body);
+  --font-meta: var(--font-body);
+  --font-caption: var(--font-body);
+
+  /* Fluid type scale */
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: clamp(1.0625rem, 1rem + 0.3vw, 1.25rem);
+  --text-lg: clamp(1.375rem, 1.15rem + 1vw, 2rem);
+  --text-xl: clamp(1.875rem, 1.3rem + 2.4vw, 3.5rem);
+  --text-2xl: clamp(2.5rem, 1.4rem + 4.6vw, 6.25rem);
+
+  --leading-tight: 1.08;
+  --leading-snug: 1.3;
+  --leading-body: 1.65;
+  --tracking-meta: 0.16em;
+
+  /* Space */
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1.25rem;
+  --space-lg: clamp(1.75rem, 1.4rem + 1.5vw, 2.75rem);
+  --space-xl: clamp(2.5rem, 1.8rem + 3vw, 4.5rem);
+  --space-section: clamp(4.5rem, 3rem + 7vw, 11rem);
+
+  /* Layout */
+  --gutter: clamp(1.25rem, 0.6rem + 2.8vw, 3.5rem);
+  --grid-gap: clamp(1rem, 0.6rem + 1.6vw, 2rem);
+  --max-width: 110rem;
+  --measure: 38rem;
+  --header-height: 4.75rem;
+  /* Footer band matches the header height: a symmetric frame around the Home hero. */
+  --footer-height: 4.75rem;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --duration-fast: 200ms;
+  --duration-slow: 900ms;
+
+  --rule: 1px solid var(--color-rule);
+}

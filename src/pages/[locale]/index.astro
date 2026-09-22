@@ -1,0 +1,14 @@
+---
+import HomeHero from '../../components/HomeHero.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { HOME, localize } from '../../data';
+import { localeStaticPaths, type Locale } from '../../i18n/locales';
+
+export const getStaticPaths = localeStaticPaths;
+
+const locale = Astro.params.locale as Locale;
+---
+
+<BaseLayout locale={locale} description={localize(HOME.meta.description, locale)} current="home" shell="viewport">
+  <HomeHero locale={locale} />
+</BaseLayout>

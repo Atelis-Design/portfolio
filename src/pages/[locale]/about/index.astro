@@ -1,0 +1,136 @@
+---
+import Photo from '../../../components/Photo.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { ABOUT, SITE, localize, viewImage } from '../../../data';
+import { localeStaticPaths, type Locale } from '../../../i18n/locales';
+import { localizedPath } from '../../../i18n/routes';
+import { useUi } from '../../../i18n/ui';
+
+export const getStaticPaths = localeStaticPaths;
+
+const locale = Astro.params.locale as Locale;
+const ui = useUi(locale);
+const portrait = ABOUT.portrait ? viewImage(ABOUT.portrait, locale, ABOUT.name) : null;
+const profile = localize(ABOUT.profile, locale);
+const studio = localize(ABOUT.studio, locale);
+---
+
+<BaseLayout locale={locale} title={ui.nav.about} description={localize(ABOUT.meta.description, locale)} current="about">
+  <section class="about-head container grid" aria-labelledby="about-title">
+    <div class="about-head__portrait">
+      {
+        portrait ? (
+          <figure class="portrait">
+            <Photo image={portrait} sizes="(min-width: 64em) 40vw, 100vw" priority />
+          </figure>
+        ) : (
+          /* Reserved slot: the real portrait is added via ABOUT.portrait in src/data/pages.ts */
+          <div class="portrait portrait--reserved" aria-hidden="true" data-portrait-slot />
+        )
+      }
+    </div>
+
+    <div class="about-head__text">
+      <p class="eyebrow">{ui.nav.about} — {SITE.brand}</p>
+      <h1 class="about-head__title" id="about-title">{ABOUT.name}</h1>
+      <p class="statement">{localize(ABOUT.lead, locale)}</p>
+    </div>
+  </section>
+
+  <section class="about-section section container grid" aria-labelledby="about-profile">
+    <h2 class="about-section__label eyebrow" id="about-profile">{ui.about.profile}</h2>
+    <div class="about-section__body prose">
+      {profile.map((paragraph) => <p>{paragraph}</p>)}
+    </div>
+  </section>
+
+  <section class="about-section section container grid rule-top" aria-labelledby="about-studio">
+    <h2 class="about-section__label eyebrow" id="about-studio">{ui.about.studio}</h2>
+    <div class="about-section__body prose">
+      {studio.map((paragraph) => <p>{paragraph}</p>)}
+    </div>
+    <p class="about-section__links">
+      <a class="link-arrow" href={localizedPath(locale, 'projects')}>{ui.common.allProjects}</a>
+      <a class="link-arrow" href={localizedPath(locale, 'contact')}>{ui.common.getInTouch}</a>
+    </p>
+  </section>
+</BaseLayout>
+
+<style>
+  .about-head {
+    padding-top: var(--space-xl);
+    row-gap: var(--space-xl);
+  }
+
+  .portrait {
+    aspect-ratio: 4 / 5;
+    background: var(--color-surface-secondary);
+  }
+
+  .portrait :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Intentional empty frame: fine inset rule and architectural corner marks */
+  .portrait--reserved {
+    position: relative;
+    background:
+      linear-gradient(var(--color-rule), var(--color-rule)) left var(--space-lg) top var(--space-lg) / 1.5rem 1px no-repeat,
+      linear-gradient(var(--color-rule), var(--color-rule)) left var(--space-lg) top var(--space-lg) / 1px 1.5rem no-repeat,
+      linear-gradient(var(--color-rule), var(--color-rule)) right var(--space-lg) bottom var(--space-lg) / 1.5rem 1px no-repeat,
+      linear-gradient(var(--color-rule), var(--color-rule)) right var(--space-lg) bottom var(--space-lg) / 1px 1.5rem no-repeat,
+      var(--color-surface-secondary);
+    border: 1px solid var(--color-divider);
+  }
+
+  .about-head__text {
+    display: grid;
+    gap: var(--space-md);
+    align-content: end;
+  }
+
+  .about-head__title {
+    font-size: var(--text-2xl);
+  }
+
+  .about-section {
+    row-gap: var(--space-lg);
+  }
+
+  .about-section__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md) var(--space-xl);
+  }
+
+  @media (min-width: 40em) and (max-width: 63.99em) {
+    .about-head__portrait {
+      grid-column: 1 / span 8;
+    }
+  }
+
+  @media (min-width: 64em) {
+    .about-head {
+      align-items: end;
+    }
+
+    .about-head__portrait {
+      grid-column: 1 / span 5;
+    }
+
+    .about-head__text {
+      grid-column: 7 / span 6;
+    }
+
+    .about-section__label {
+      grid-column: 1 / span 3;
+    }
+
+    .about-section__body,
+    .about-section__links {
+      grid-column: 7 / span 5;
+    }
+  }
+</style>

@@ -1,0 +1,93 @@
+---
+import '../styles/tokens.css';
+import '../styles/base.css';
+import '../styles/layout.css';
+
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { FONT_FACE_CSS, FONT_PRELOAD } from '../styles/fonts';
+import { SITE } from '../data';
+import { LOCALES, OG_LOCALES, type Locale } from '../i18n/locales';
+import { absoluteUrl, switchLocalePath, type RouteKey } from '../i18n/routes';
+import { useUi } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+  /** Page title without the brand suffix; omit for the home page. */
+  title?: string;
+  description: string;
+  /** Current route key, for navigation state. */
+  current?: RouteKey | null;
+  /** Emit hreflang alternates (localized pages only). */
+  alternates?: boolean;
+  /** Full header/footer; false for utility pages (root entry, 404). */
+  chrome?: boolean;
+  /** `viewport`: Home's header, image hero and compact footer fill one desktop viewport. */
+  shell?: 'default' | 'viewport';
+  noindex?: boolean;
+  /** Absolute path of an Open Graph image. None exists yet (next phase). */
+  ogImage?: string | null;
+  ogType?: 'website' | 'article';
+}
+
+const {
+  locale,
+  title,
+  description,
+  current = null,
+  alternates = true,
+  chrome = true,
+  shell = 'default',
+  noindex = false,
+  ogImage = SITE.ogImage,
+  ogType = 'website',
+} = Astro.props;
+
+const ui = useUi(locale);
+const path = Astro.url.pathname;
+const canonical = absoluteUrl(path);
+const fullTitle = title ? `${title} — ${SITE.brand}` : SITE.brand;
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
+    {
+      alternates &&
+        LOCALES.map((code) => (
+          <link rel="alternate" hreflang={code} href={absoluteUrl(switchLocalePath(path, code))} />
+        ))
+    }
+    {alternates && <link rel="alternate" hreflang="x-default" href={absoluteUrl('/')} />}
+
+    <link rel="preload" href={FONT_PRELOAD} as="font" type="font/woff2" crossorigin />
+    <style is:inline set:html={FONT_FACE_CSS}></style>
+
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <meta name="theme-color" content={SITE.themeColor} />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={SITE.brand} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={OG_LOCALES[locale]} />
+    {ogImage && <meta property="og:image" content={absoluteUrl(ogImage)} />}
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+
+    <slot name="head" />
+  </head>
+  <body class:list={[{ 'viewport-shell': shell === 'viewport' }]}>
+    <a class="skip-link" href="#main">{ui.a11y.skipToContent}</a>
+    {chrome && <Header locale={locale} path={path} current={current} />}
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    {chrome && <Footer locale={locale} />}
+  </body>
+</html>
