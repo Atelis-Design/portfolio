@@ -1,0 +1,492 @@
+---
+/**
+ * Contact form: name, email, project type, message.
+ *
+ * Posts to the Cloudflare Pages Function at CONTACT_ENDPOINT. With JavaScript
+ * the form validates in the page language and submits JSON, with inline
+ * sending / success / error states — no navigation, no modal, no layout jump
+ * (the status line has reserved space on small screens and sits outside the flow
+ * on desktop, like the field errors). Without JavaScript it
+ * is a native POST: browser validation, then the endpoint redirects back here
+ * and :target reveals the result.
+ *
+ * Every control has a real <label>. Labels are visually hidden because the
+ * approved design shows each field's name as its placeholder (placeholder
+ * colour --color-text-muted meets 4.5:1 on the page surface).
+ */
+import type { Locale } from '../i18n/locales';
+import { format, useUi } from '../i18n/ui';
+import { CONTACT_ENDPOINT, CONTACT_LIMITS, HONEYPOT_FIELD, PROJECT_TYPES } from '../lib/contact';
+
+interface Props {
+  locale: Locale;
+  /** id of the visible heading that names the form. */
+  labelledBy: string;
+}
+
+const { locale, labelledBy } = Astro.props;
+const t = useUi(locale).contactForm;
+const messageError = format(t.invalid.message, { min: CONTACT_LIMITS.messageMin });
+---
+
+<form
+  class="contact-form"
+  action={CONTACT_ENDPOINT}
+  method="post"
+  aria-labelledby={labelledBy}
+  data-contact-form
+  data-state="idle"
+>
+  <input type="hidden" name="locale" value={locale} />
+
+  <!-- Anti-spam honeypot: off-screen, unfocusable, hidden from assistive technology. -->
+  <div class="contact-form__trap" aria-hidden="true">
+    <label for="cf-trap">{t.honeypot}</label>
+    <input id="cf-trap" name={HONEYPOT_FIELD} type="text" tabindex="-1" autocomplete="off" />
+  </div>
+
+  <fieldset class="contact-form__fields" data-fields>
+    <div class="field">
+      <label class="visually-hidden" for="cf-name">{t.name}</label>
+      <input
+        id="cf-name"
+        name="name"
+        type="text"
+        autocomplete="name"
+        maxlength={CONTACT_LIMITS.name}
+        placeholder={t.name}
+        aria-describedby="cf-name-error"
+        required
+      />
+      <p class="field__error" id="cf-name-error" data-error-for="name" data-message={t.invalid.name}></p>
+    </div>
+
+    <div class="field">
+      <label class="visually-hidden" for="cf-email">{t.email}</label>
+      <input
+        id="cf-email"
+        name="email"
+        type="email"
+        autocomplete="email"
+        autocapitalize="off"
+        spellcheck="false"
+        maxlength={CONTACT_LIMITS.email}
+        placeholder={t.email}
+        aria-describedby="cf-email-error"
+        required
+      />
+      <p class="field__error" id="cf-email-error" data-error-for="email" data-message={t.invalid.email}></p>
+    </div>
+
+    <div class="field">
+      <label class="visually-hidden" for="cf-type">{t.projectType}</label>
+      <div class="field__select">
+        <select id="cf-type" name="projectType" aria-describedby="cf-type-error" required>
+          <option value="" disabled selected>{t.projectType}</option>
+          {PROJECT_TYPES.map((value) => <option value={value}>{t.projectTypes[value]}</option>)}
+        </select>
+        <svg class="field__chevron" width="12" height="7" viewBox="0 0 12 7" aria-hidden="true" focusable="false">
+          <path d="M1 1l5 5 5-5"></path>
+        </svg>
+      </div>
+      <p class="field__error" id="cf-type-error" data-error-for="projectType" data-message={t.invalid.projectType}></p>
+    </div>
+
+    <div class="field">
+      <label class="visually-hidden" for="cf-message">{t.message}</label>
+      <textarea
+        id="cf-message"
+        name="message"
+        rows="7"
+        minlength={CONTACT_LIMITS.messageMin}
+        maxlength={CONTACT_LIMITS.messageMax}
+        placeholder={t.message}
+        aria-describedby="cf-message-error"
+        required></textarea>
+      <p class="field__error" id="cf-message-error" data-error-for="message" data-message={messageError}></p>
+    </div>
+
+    <button class="contact-form__submit" type="submit" data-submit data-label-sending={t.sending}>
+      <span data-submit-label>{t.submit}</span>
+      <svg class="contact-form__arrow" width="19" height="12" viewBox="0 0 19 12" aria-hidden="true" focusable="false">
+        <path d="M0 6h18M13 1l5 5-5 5"></path>
+      </svg>
+    </button>
+  </fieldset>
+
+  <div class="contact-form__status">
+    <p role="status" data-status="success" data-message={t.success}></p>
+    <p role="alert" data-status="error" data-message={t.error}></p>
+    <!-- No-JavaScript results, revealed by the endpoint's redirect to #contact-sent / #contact-failed -->
+    <p class="contact-form__fallback" id="contact-sent">{t.success}</p>
+    <p class="contact-form__fallback" id="contact-failed">{t.error}</p>
+  </div>
+</form>
+
+<script>
+  import { CONTACT_FIELDS, HONEYPOT_FIELD, validateContact } from '../lib/contact';
+
+  /** Longer than the endpoint's worst case, so a slow success is never reported as a failure. */
+  const REQUEST_TIMEOUT_MS = 20000;
+
+  type Control = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+  document.querySelectorAll<HTMLFormElement>('[data-contact-form]').forEach((form) => {
+    const fields = form.querySelector<HTMLFieldSetElement>('[data-fields]');
+    const submit = form.querySelector<HTMLButtonElement>('[data-submit]');
+    const submitLabel = form.querySelector<HTMLElement>('[data-submit-label]');
+    const success = form.querySelector<HTMLElement>('[data-status="success"]');
+    const failure = form.querySelector<HTMLElement>('[data-status="error"]');
+    if (!fields || !submit || !submitLabel || !success || !failure) return;
+
+    const idleLabel = submitLabel.textContent ?? '';
+    const control = (name: string) => form.elements.namedItem(name) as Control | null;
+    let attempted = false;
+    let sending = false;
+
+    // Messages in the page language replace the browser's own validation bubbles.
+    form.noValidate = true;
+
+    const values = () => Object.fromEntries(new FormData(form)) as Record<string, unknown>;
+
+    /** Mark invalid fields. `onlyClear` (while typing) removes resolved errors but adds none. */
+    const showErrors = (invalid: ReadonlySet<string>, onlyClear = false) => {
+      for (const name of CONTACT_FIELDS) {
+        const input = control(name);
+        const error = form.querySelector<HTMLElement>(`[data-error-for="${name}"]`);
+        const bad = invalid.has(name);
+        if (!input || !error || (onlyClear && bad)) continue;
+        if (bad) input.setAttribute('aria-invalid', 'true');
+        else input.removeAttribute('aria-invalid');
+        error.textContent = bad ? (error.dataset.message ?? '') : '';
+      }
+    };
+
+    const check = (onlyClear = false) => {
+      const result = validateContact(values());
+      showErrors(new Set(result.ok ? [] : result.invalid), onlyClear);
+      return result;
+    };
+
+    const setStatus = (kind: 'success' | 'error' | null) => {
+      success.textContent = kind === 'success' ? (success.dataset.message ?? '') : '';
+      failure.textContent = kind === 'error' ? (failure.dataset.message ?? '') : '';
+      // A result from an earlier no-JavaScript post (#contact-sent / #contact-failed) is now stale.
+      form.querySelectorAll<HTMLElement>('.contact-form__fallback').forEach((el) => (el.hidden = true));
+    };
+
+    /** aria-disabled (not `disabled`) keeps keyboard focus on the button while sending. */
+    const setSending = (value: boolean) => {
+      sending = value;
+      form.setAttribute('aria-busy', String(value));
+      if (value) submit.setAttribute('aria-disabled', 'true');
+      else submit.removeAttribute('aria-disabled');
+      submitLabel.textContent = value ? (submit.dataset.labelSending ?? idleLabel) : idleLabel;
+    };
+
+    // After the first attempt: typing clears resolved errors; leaving a field re-checks it.
+    form.addEventListener('input', () => {
+      if (attempted) check(true);
+    });
+    form.addEventListener('change', () => {
+      if (attempted) check();
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (sending || form.dataset.state === 'success') return;
+
+      attempted = true;
+      setStatus(null);
+      const result = check();
+      if (!result.ok) {
+        const first = CONTACT_FIELDS.find((name) => result.invalid.includes(name));
+        if (first) control(first)?.focus();
+        else setStatus('error');
+        return;
+      }
+
+      form.dataset.state = 'sending';
+      setSending(true);
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ ...result.data, [HONEYPOT_FIELD]: control(HONEYPOT_FIELD)?.value ?? '' }),
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+        const body: unknown = await response.json().catch(() => null);
+        const accepted = response.ok && typeof body === 'object' && body !== null && 'ok' in body && body.ok === true;
+        if (!accepted) throw new Error(`Contact endpoint answered ${response.status}`);
+
+        form.reset();
+        form.dataset.state = 'success';
+        fields.disabled = true;
+        setStatus('success');
+      } catch {
+        // Unreachable backend, missing configuration, provider error or timeout: never report success.
+        form.dataset.state = 'error';
+        setStatus('error');
+      } finally {
+        setSending(false);
+      }
+    });
+  });
+</script>
+
+<style>
+  .contact-form {
+    --field-border: color-mix(in srgb, var(--color-text-primary) 30%, transparent);
+    --field-pad: var(--space-md);
+    --field-height: 3.5rem;
+    --field-gap: var(--space-md);
+    font-family: var(--font-brand);
+  }
+
+  .contact-form__trap {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .contact-form__fields {
+    display: grid;
+    gap: var(--field-gap);
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .field {
+    min-width: 0;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    display: block;
+    width: 100%;
+    height: var(--field-height);
+    padding: 0 var(--field-pad);
+    background: transparent;
+    border: 1px solid var(--field-border);
+    border-radius: 0;
+    font-family: var(--font-brand);
+    font-size: var(--text-md);
+    letter-spacing: 0.01em;
+    color: var(--color-text-primary);
+    appearance: none;
+    transition: border-color var(--duration-fast) var(--ease);
+  }
+
+  /*
+   * Initial height: what is left of the screen once the page (--contact-offset, set by the
+   * Contact page on desktop) and the other fields and button are placed, between 7rem and
+   * 15rem. Without the offset (phones, tablets) that is simply 15rem. The visitor can
+   * always drag it taller; the page then grows and scrolls.
+   */
+  .field textarea {
+    height: clamp(
+      7rem,
+      100svh - var(--contact-offset, 0px) - 4 * var(--field-height) - 4 * var(--field-gap) - 2px,
+      15rem
+    );
+    min-height: 7rem;
+    padding-block: 0.85rem;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  .field input::placeholder,
+  .field textarea::placeholder {
+    color: var(--color-text-muted);
+    opacity: 1;
+  }
+
+  .field input:hover,
+  .field select:hover,
+  .field textarea:hover {
+    border-color: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
+  }
+
+  /* Focus: the frame darkens and doubles (an outline, so it survives forced-colours mode) */
+  .field input:focus-visible,
+  .field select:focus-visible,
+  .field textarea:focus-visible {
+    border-color: var(--color-text-primary);
+    outline: 1px solid var(--color-text-primary);
+    outline-offset: -2px;
+  }
+
+  .field [aria-invalid='true'] {
+    border-color: var(--color-text-primary);
+  }
+
+  /* Keep autofilled fields on the page tone */
+  .field input:-webkit-autofill {
+    -webkit-text-fill-color: var(--color-text-primary);
+    box-shadow: 0 0 0 100px var(--color-surface-primary) inset;
+  }
+
+  .field__select {
+    position: relative;
+  }
+
+  .field__select select {
+    padding-right: calc(var(--field-pad) * 2 + 0.75rem);
+    cursor: pointer;
+  }
+
+  /* Placeholder option selected: same tone as the other placeholders */
+  .field__select select:has(option[value='']:checked) {
+    color: var(--color-text-muted);
+  }
+
+  .field__select option {
+    color: var(--color-text-primary);
+  }
+
+  .field__chevron {
+    position: absolute;
+    top: 50%;
+    right: var(--field-pad);
+    width: 0.75rem;
+    height: auto;
+    transform: translateY(-50%);
+    fill: none;
+    stroke: var(--color-text-primary);
+    stroke-width: 1.2;
+    pointer-events: none;
+  }
+
+  .field__error {
+    font-size: var(--text-base);
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    color: var(--color-text-primary);
+  }
+
+  .field__error:not(:empty) {
+    margin-top: 0.4rem;
+  }
+
+  .contact-form__submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    width: 100%;
+    min-height: var(--field-height);
+    padding: 0.5rem var(--field-pad);
+    background: var(--color-text-primary);
+    border: 1px solid var(--color-text-primary);
+    border-radius: 0;
+    font-family: var(--font-brand);
+    font-size: var(--text-sm);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-surface-primary);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease);
+  }
+
+  .contact-form__submit:hover {
+    background: var(--color-text-secondary);
+  }
+
+  .contact-form__arrow {
+    flex: none;
+    width: 1.2rem;
+    height: auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.2;
+    transition: transform var(--duration-fast) var(--ease);
+  }
+
+  .contact-form__submit:hover .contact-form__arrow {
+    transform: translateX(0.25rem);
+  }
+
+  /* Sending: restrained — label changes, arrow steps aside */
+  .contact-form__submit[aria-disabled='true'] {
+    cursor: progress;
+  }
+
+  .contact-form__submit[aria-disabled='true'] .contact-form__arrow {
+    opacity: 0;
+  }
+
+  /* Sent: the form rests, same dimensions */
+  .contact-form__fields:disabled .field,
+  .contact-form__fields:disabled .contact-form__submit {
+    opacity: 0.55;
+  }
+
+  .contact-form__fields:disabled .contact-form__submit {
+    cursor: default;
+    background: var(--color-text-primary);
+  }
+
+  /* Reserved room for one status message (3 lines on phones, 2 wider): showing it moves nothing */
+  .contact-form__status {
+    min-height: calc(3 * 1.45em);
+    margin-top: var(--space-sm);
+    font-size: var(--text-md);
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    color: var(--color-text-primary);
+  }
+
+  @media (min-width: 40em) {
+    .contact-form__status {
+      min-height: calc(2 * 1.45em);
+    }
+  }
+
+  .contact-form__fallback:not(:target) {
+    display: none;
+  }
+
+  /*
+   * Desktop (the Contact page's two-column breakpoint): the page fits one screen, so
+   * field errors sit in the gaps between fields and the status line sits below the
+   * button, in the space above the footer. Neither adds height to the page.
+   */
+  @media (min-width: 64em) {
+    .contact-form {
+      --field-gap: 1.5rem;
+      position: relative;
+    }
+
+    .field {
+      position: relative;
+    }
+
+    .field__error,
+    .field__error:not(:empty) {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 0.2rem;
+      font-size: var(--text-sm);
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .contact-form__status {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      min-height: 0;
+      margin-top: var(--space-xs);
+    }
+  }
+</style>

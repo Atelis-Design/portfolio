@@ -1,18 +1,18 @@
 ---
-import ContactDetails from '../../../components/ContactDetails.astro';
-import Photo from '../../../components/Photo.astro';
+/**
+ * Contact: editorial introduction (left) · hairline divider · message form (right).
+ * Stacks on narrower screens (introduction, then form) without the divider.
+ */
+import ContactForm from '../../../components/ContactForm.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import { CONTACT, getProjectSummary, localize, viewImage } from '../../../data';
+import { CONTACT, localize } from '../../../data';
 import { localeStaticPaths, type Locale } from '../../../i18n/locales';
-import { localizedPath } from '../../../i18n/routes';
 import { useUi } from '../../../i18n/ui';
 
 export const getStaticPaths = localeStaticPaths;
 
 const locale = Astro.params.locale as Locale;
 const ui = useUi(locale);
-const imageProject = getProjectSummary(CONTACT.image.projectId, locale);
-const image = viewImage(CONTACT.image.image, locale, imageProject?.title ?? '');
 ---
 
 <BaseLayout
@@ -21,59 +21,164 @@ const image = viewImage(CONTACT.image.image, locale, imageProject?.title ?? '');
   description={localize(CONTACT.meta.description, locale)}
   current="contact"
 >
-  <header class="page-intro container grid">
-    <h1 class="page-intro__title">{ui.nav.contact}</h1>
-    <p class="page-intro__lead statement">{localize(CONTACT.lead, locale)}</p>
-  </header>
-
-  <section class="contact container grid" aria-label={ui.nav.contact}>
-    <div class="contact__details">
-      <ContactDetails locale={locale} />
-      <div class="contact__inquiry">
-        <p class="prose">{localize(CONTACT.body, locale)}</p>
-        <a class="link-arrow" href={localizedPath(locale, 'services', 'inquiry')}>{ui.services.inquiry}</a>
+  <div class="contact container">
+    <div class="contact__intro">
+      <p class="contact__label">{ui.nav.contact}</p>
+      <span class="contact__rule" aria-hidden="true"></span>
+      <h1 class="contact__title">{localize(CONTACT.headline, locale)}</h1>
+      <div class="contact__text">
+        {localize(CONTACT.paragraphs, locale).map((paragraph) => <p>{paragraph}</p>)}
       </div>
     </div>
-    <figure class="contact__image">
-      <Photo image={image} sizes="(min-width: 64em) 40vw, 100vw" />
-    </figure>
-  </section>
+
+    <span class="contact__divider" aria-hidden="true"></span>
+
+    <div class="contact__form">
+      <h2 class="contact__label" id="contact-form-title">{ui.contactForm.heading}</h2>
+      <span class="contact__rule contact__rule--form" aria-hidden="true"></span>
+      <ContactForm locale={locale} labelledBy="contact-form-title" />
+    </div>
+  </div>
 </BaseLayout>
 
 <style>
   .contact {
+    display: grid;
     row-gap: var(--space-xl);
+    padding-block: var(--space-lg) var(--space-md);
+    font-family: var(--font-brand);
   }
 
-  .contact__details {
+  /* The headline scales with its own column (cqi), so the longest word always fits */
+  .contact__intro {
+    container-type: inline-size;
+    max-width: 34rem;
+  }
+
+  /* Small section label (eyebrow / form heading) + short rule */
+  .contact__label {
+    font-family: var(--font-brand);
+    font-size: var(--text-sm);
+    line-height: 1.4;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-primary);
+  }
+
+  .contact__rule {
+    display: block;
+    width: 2.5rem;
+    height: 1px;
+    margin-block: var(--space-sm) var(--space-lg);
+    background: var(--color-text-primary);
+  }
+
+  .contact__rule--form {
+    margin-bottom: var(--space-md);
+  }
+
+  /*
+   * 12cqi: the longest word in any locale (TR "TASARLAYALIM", ≈ 8em) fills at most ~97% of the column.
+   * Capped lower while stacked, so tablets do not get a larger headline than desktop.
+   */
+  .contact__title {
+    font-family: var(--font-brand);
+    font-size: clamp(2rem, 12cqi, 3.5rem);
+    line-height: 1.04;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-primary);
+  }
+
+  /* Same size as the Home hero description */
+  .contact__text {
     display: grid;
-    gap: var(--space-xl);
-    align-content: start;
+    gap: 1em;
+    max-width: 28rem;
+    margin-top: var(--space-lg);
+    font-size: clamp(1.125rem, 1rem + 0.45vw, 1.375rem);
+    line-height: 1.45;
+    letter-spacing: 0.02em;
+    color: var(--color-text-secondary);
   }
 
-  .contact__inquiry {
-    display: grid;
-    gap: var(--space-md);
-    justify-items: start;
+  .contact__divider {
+    display: none;
   }
 
-  .contact__image :global(img) {
-    width: 100%;
-  }
-
-  @media (min-width: 40em) and (max-width: 63.99em) {
-    .contact__image {
-      grid-column: 5 / span 8;
-    }
-  }
-
+  /*
+   * Desktop: header, the whole composition and the footer fit the first screen.
+   * The vertical rhythm lives in the custom properties below; --contact-offset adds up
+   * everything on that screen except the form's fields, and ContactForm sizes the
+   * message box from it. The form's status line and field errors sit outside the
+   * flow here, so no form state makes the page taller.
+   */
   @media (min-width: 64em) {
-    .contact__details {
-      grid-column: 1 / span 5;
+    .contact {
+      --contact-pad-top: var(--space-xl);
+      --contact-pad-bottom: var(--space-xs);
+      /* short rule → headline, headline → paragraphs, short rule → first field */
+      --contact-title-gap: var(--space-lg);
+      --contact-text-gap: var(--space-xl);
+      --contact-form-gap: 1.75rem;
+      --contact-offset: calc(
+        var(--header-height) + 1px + var(--contact-pad-top) + var(--text-sm) * 1.4 + var(--space-sm) + 1px +
+          var(--contact-form-gap) + var(--contact-pad-bottom) + var(--space-xl) + 1px + var(--footer-height)
+      );
+      grid-template-columns: minmax(0, 2fr) 1px minmax(0, 3fr);
+      column-gap: var(--space-xl);
+      padding-block: var(--contact-pad-top) var(--contact-pad-bottom);
     }
 
-    .contact__image {
-      grid-column: 8 / span 5;
+    .contact__intro {
+      max-width: none;
+    }
+
+    .contact__rule {
+      margin-bottom: var(--contact-title-gap);
+    }
+
+    .contact__title {
+      font-size: clamp(2rem, 12cqi, 5rem);
+    }
+
+    .contact__text {
+      margin-top: var(--contact-text-gap);
+    }
+
+    /* Hairline from just above the labels to just below the button */
+    .contact__divider {
+      display: block;
+      margin-block: calc(-1 * var(--space-sm)) calc(-1 * var(--space-md));
+      background: var(--color-rule);
+    }
+
+    .contact__form {
+      width: 100%;
+      max-width: 48rem;
+      padding-left: var(--space-sm);
+    }
+
+    .contact__rule--form {
+      margin-bottom: var(--contact-form-gap);
+    }
+  }
+
+  /*
+   * Shorter desktop screens (e.g. 1366×768): a more compact rhythm, same composition.
+   * From 1600px wide the headline is larger (it scales with its column), so the
+   * compact rhythm starts a little earlier there (below 960px instead of 900px tall).
+   */
+  @media (min-width: 64em) and (max-height: 56.24em), (min-width: 100em) and (max-height: 59.99em) {
+    .contact {
+      --contact-pad-top: 1.75rem;
+      --contact-title-gap: var(--space-md);
+      --contact-text-gap: 2rem;
+      --contact-form-gap: var(--space-md);
+    }
+
+    .contact__text {
+      gap: 0.75em;
     }
   }
 </style>

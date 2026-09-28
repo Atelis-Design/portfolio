@@ -1,9 +1,13 @@
+import type { ProjectType } from '../lib/contact';
 import type { Locale } from './locales';
 
 /**
  * Structural UI strings (navigation, labels, form fields).
- * Page body copy lives in `src/content/`, not here.
+ * Page body copy lives in `src/data/pages.ts`, not here.
  * English defines the shape; every locale must provide every key.
+ *
+ * `contactForm` is also read by the contact endpoint (functions/api/contact.ts)
+ * for the visitor confirmation email, so keep this module free of Astro/asset imports.
  */
 const en = {
   nav: {
@@ -95,12 +99,41 @@ const en = {
     submitInactive: 'Online submission is not active yet.',
     contactLink: 'Contact page',
   },
+  contactForm: {
+    heading: 'Send us a message',
+    name: 'Your name',
+    email: 'Your email address',
+    projectType: 'Project type',
+    projectTypes: {
+      residential: 'Residential',
+      commercial: 'Commercial',
+      'interior-architecture': 'Interior Architecture',
+      renovation: 'Renovation',
+      consultation: 'Consultation',
+      other: 'Other',
+    } satisfies Record<ProjectType, string>,
+    message: 'Your message',
+    submit: 'Send message',
+    sending: 'Sending…',
+    success: 'Thank you. We have received your message and will get back to you as soon as possible.',
+    error: 'Your message could not be sent. Please try again.',
+    invalid: {
+      name: 'Please enter your name.',
+      email: 'Please enter a valid email address.',
+      projectType: 'Please select a project type.',
+      message: 'Please write a message of at least {min} characters.',
+    },
+    /** Label of the hidden anti-spam field (never shown or announced). */
+    honeypot: 'Leave this field empty',
+    /** Visitor confirmation email, sent in the locale the form was submitted from. */
+    confirmation: {
+      subject: 'Thank you for your message',
+      greeting: 'Dear {name},',
+    },
+  },
   contact: {
     email: 'Email',
-    phone: 'Phone',
     instagram: 'Instagram',
-    location: 'Location',
-    pending: 'Details to follow',
   },
   footer: {
     rights: 'All rights reserved.',
@@ -190,12 +223,39 @@ const tr: UiStrings = {
     submitInactive: 'Çevrimiçi gönderim henüz aktif değil.',
     contactLink: 'İletişim sayfası',
   },
+  contactForm: {
+    heading: 'Mesajınızı gönderin',
+    name: 'Adınız',
+    email: 'E-posta adresiniz',
+    projectType: 'Proje türü',
+    projectTypes: {
+      residential: 'Konut',
+      commercial: 'Ticari',
+      'interior-architecture': 'İç Mimarlık',
+      renovation: 'Renovasyon',
+      consultation: 'Danışmanlık',
+      other: 'Diğer',
+    },
+    message: 'Mesajınız',
+    submit: 'Mesaj gönder',
+    sending: 'Gönderiliyor…',
+    success: 'Teşekkürler. Mesajınız bize ulaştı. En kısa sürede sizinle iletişime geçeceğiz.',
+    error: 'Mesajınız gönderilemedi. Lütfen tekrar deneyin.',
+    invalid: {
+      name: 'Lütfen adınızı girin.',
+      email: 'Lütfen geçerli bir e-posta adresi girin.',
+      projectType: 'Lütfen bir proje türü seçin.',
+      message: 'Lütfen en az {min} karakterlik bir mesaj yazın.',
+    },
+    honeypot: 'Bu alanı boş bırakın',
+    confirmation: {
+      subject: 'Mesajınız için teşekkürler',
+      greeting: 'Merhaba {name},',
+    },
+  },
   contact: {
     email: 'E-posta',
-    phone: 'Telefon',
     instagram: 'Instagram',
-    location: 'Konum',
-    pending: 'Yakında paylaşılacak',
   },
   footer: { rights: 'Tüm hakları saklıdır.' },
   notFound: {
@@ -279,12 +339,39 @@ const de: UiStrings = {
     submitInactive: 'Die Online-Übermittlung ist noch nicht aktiv.',
     contactLink: 'Kontaktseite',
   },
+  contactForm: {
+    heading: 'Senden Sie uns eine Nachricht',
+    name: 'Ihr Name',
+    email: 'Ihre E-Mail-Adresse',
+    projectType: 'Projektart',
+    projectTypes: {
+      residential: 'Wohnen',
+      commercial: 'Gewerbe',
+      'interior-architecture': 'Innenarchitektur',
+      renovation: 'Renovierung',
+      consultation: 'Beratung',
+      other: 'Sonstiges',
+    },
+    message: 'Ihre Nachricht',
+    submit: 'Nachricht senden',
+    sending: 'Wird gesendet…',
+    success: 'Vielen Dank. Ihre Nachricht ist bei uns eingegangen. Wir werden uns so bald wie möglich bei Ihnen melden.',
+    error: 'Ihre Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es erneut.',
+    invalid: {
+      name: 'Bitte geben Sie Ihren Namen ein.',
+      email: 'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
+      projectType: 'Bitte wählen Sie eine Projektart aus.',
+      message: 'Bitte schreiben Sie eine Nachricht mit mindestens {min} Zeichen.',
+    },
+    honeypot: 'Dieses Feld bitte leer lassen',
+    confirmation: {
+      subject: 'Vielen Dank für Ihre Nachricht',
+      greeting: 'Guten Tag {name},',
+    },
+  },
   contact: {
     email: 'E-Mail',
-    phone: 'Telefon',
     instagram: 'Instagram',
-    location: 'Standort',
-    pending: 'Folgt in Kürze',
   },
   footer: { rights: 'Alle Rechte vorbehalten.' },
   notFound: {
@@ -368,12 +455,39 @@ const fr: UiStrings = {
     submitInactive: 'L’envoi en ligne n’est pas encore actif.',
     contactLink: 'Page contact',
   },
+  contactForm: {
+    heading: 'Envoyez-nous un message',
+    name: 'Votre nom',
+    email: 'Votre adresse e-mail',
+    projectType: 'Type de projet',
+    projectTypes: {
+      residential: 'Résidentiel',
+      commercial: 'Commercial',
+      'interior-architecture': 'Architecture intérieure',
+      renovation: 'Rénovation',
+      consultation: 'Conseil',
+      other: 'Autre',
+    },
+    message: 'Votre message',
+    submit: 'Envoyer le message',
+    sending: 'Envoi en cours…',
+    success: 'Merci. Nous avons bien reçu votre message et nous vous répondrons dans les plus brefs délais.',
+    error: 'Votre message n’a pas pu être envoyé. Veuillez réessayer.',
+    invalid: {
+      name: 'Veuillez indiquer votre nom.',
+      email: 'Veuillez indiquer une adresse e-mail valide.',
+      projectType: 'Veuillez choisir un type de projet.',
+      message: 'Veuillez écrire un message d’au moins {min} caractères.',
+    },
+    honeypot: 'Laissez ce champ vide',
+    confirmation: {
+      subject: 'Merci pour votre message',
+      greeting: 'Bonjour {name},',
+    },
+  },
   contact: {
     email: 'E-mail',
-    phone: 'Téléphone',
     instagram: 'Instagram',
-    location: 'Localisation',
-    pending: 'À venir',
   },
   footer: { rights: 'Tous droits réservés.' },
   notFound: {
@@ -457,12 +571,39 @@ const es: UiStrings = {
     submitInactive: 'El envío en línea aún no está activo.',
     contactLink: 'Página de contacto',
   },
+  contactForm: {
+    heading: 'Envíenos un mensaje',
+    name: 'Su nombre',
+    email: 'Su correo electrónico',
+    projectType: 'Tipo de proyecto',
+    projectTypes: {
+      residential: 'Residencial',
+      commercial: 'Comercial',
+      'interior-architecture': 'Arquitectura de interiores',
+      renovation: 'Renovación',
+      consultation: 'Consultoría',
+      other: 'Otro',
+    },
+    message: 'Su mensaje',
+    submit: 'Enviar mensaje',
+    sending: 'Enviando…',
+    success: 'Gracias. Hemos recibido su mensaje y nos pondremos en contacto con usted lo antes posible.',
+    error: 'No se ha podido enviar su mensaje. Inténtelo de nuevo.',
+    invalid: {
+      name: 'Por favor, indique su nombre.',
+      email: 'Por favor, indique una dirección de correo electrónico válida.',
+      projectType: 'Por favor, seleccione un tipo de proyecto.',
+      message: 'Por favor, escriba un mensaje de al menos {min} caracteres.',
+    },
+    honeypot: 'Deje este campo vacío',
+    confirmation: {
+      subject: 'Gracias por su mensaje',
+      greeting: 'Hola, {name}:',
+    },
+  },
   contact: {
     email: 'Correo electrónico',
-    phone: 'Teléfono',
     instagram: 'Instagram',
-    location: 'Ubicación',
-    pending: 'Próximamente',
   },
   footer: { rights: 'Todos los derechos reservados.' },
   notFound: {
@@ -546,12 +687,39 @@ const it: UiStrings = {
     submitInactive: 'L’invio online non è ancora attivo.',
     contactLink: 'Pagina contatti',
   },
+  contactForm: {
+    heading: 'Inviaci un messaggio',
+    name: 'Il suo nome',
+    email: 'Il suo indirizzo e-mail',
+    projectType: 'Tipo di progetto',
+    projectTypes: {
+      residential: 'Residenziale',
+      commercial: 'Commerciale',
+      'interior-architecture': 'Architettura d’interni',
+      renovation: 'Ristrutturazione',
+      consultation: 'Consulenza',
+      other: 'Altro',
+    },
+    message: 'Il suo messaggio',
+    submit: 'Invia messaggio',
+    sending: 'Invio in corso…',
+    success: 'Grazie. Abbiamo ricevuto il suo messaggio e la contatteremo il prima possibile.',
+    error: 'Non è stato possibile inviare il messaggio. Riprovi.',
+    invalid: {
+      name: 'Inserisca il suo nome.',
+      email: 'Inserisca un indirizzo e-mail valido.',
+      projectType: 'Selezioni un tipo di progetto.',
+      message: 'Scriva un messaggio di almeno {min} caratteri.',
+    },
+    honeypot: 'Lasci vuoto questo campo',
+    confirmation: {
+      subject: 'Grazie per il suo messaggio',
+      greeting: 'Gentile {name},',
+    },
+  },
   contact: {
     email: 'E-mail',
-    phone: 'Telefono',
     instagram: 'Instagram',
-    location: 'Sede',
-    pending: 'In arrivo',
   },
   footer: { rights: 'Tutti i diritti riservati.' },
   notFound: {
@@ -635,12 +803,39 @@ const ru: UiStrings = {
     submitInactive: 'Онлайн-отправка пока недоступна.',
     contactLink: 'Страница контактов',
   },
+  contactForm: {
+    heading: 'Отправьте нам сообщение',
+    name: 'Ваше имя',
+    email: 'Ваш адрес электронной почты',
+    projectType: 'Тип проекта',
+    projectTypes: {
+      residential: 'Жилой проект',
+      commercial: 'Коммерческий проект',
+      'interior-architecture': 'Дизайн интерьера',
+      renovation: 'Реновация',
+      consultation: 'Консультация',
+      other: 'Другое',
+    },
+    message: 'Ваше сообщение',
+    submit: 'Отправить сообщение',
+    sending: 'Отправка…',
+    success: 'Спасибо. Мы получили ваше сообщение и свяжемся с вами в ближайшее время.',
+    error: 'Не удалось отправить сообщение. Пожалуйста, попробуйте ещё раз.',
+    invalid: {
+      name: 'Пожалуйста, укажите ваше имя.',
+      email: 'Пожалуйста, укажите корректный адрес электронной почты.',
+      projectType: 'Пожалуйста, выберите тип проекта.',
+      message: 'Пожалуйста, напишите сообщение длиной не менее {min} символов.',
+    },
+    honeypot: 'Оставьте это поле пустым',
+    confirmation: {
+      subject: 'Спасибо за ваше сообщение',
+      greeting: 'Здравствуйте, {name}!',
+    },
+  },
   contact: {
     email: 'Эл. почта',
-    phone: 'Телефон',
     instagram: 'Instagram',
-    location: 'Местоположение',
-    pending: 'Скоро',
   },
   footer: { rights: 'Все права защищены.' },
   notFound: {

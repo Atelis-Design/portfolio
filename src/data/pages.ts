@@ -1,3 +1,4 @@
+import type { Locale } from '../i18n/locales';
 import type { ImageAsset, Localized } from './types';
 import { TEMP } from './placeholder';
 
@@ -7,7 +8,6 @@ import heroSlide2 from '../assets/home/hero(2).jpeg';
 import heroSlide3 from '../assets/home/hero(3).png';
 import heroSlide4 from '../assets/home/hero(4).jpg';
 import servicesImage from '../assets/projects/casa-olivia/05.jpg';
-import contactImage from '../assets/projects/walden/03.jpg';
 
 /** Page-level copy. Non-Home pages remain TEMP until their content phase. */
 
@@ -172,9 +172,58 @@ export const SERVICES = {
   inquiryIntro: { en: TEMP.short } as Localized,
 };
 
+/**
+ * CLIENT-APPROVED Contact copy, complete in every locale (no fallback needed).
+ * Stored in natural case; the page sets it in capitals with CSS (lang-aware, so
+ * Turkish i → İ). The eyebrow is the localized navigation label (ui.nav.contact);
+ * form strings live in src/i18n/ui.ts (contactForm).
+ */
+const CONTACT_PARAGRAPHS = {
+  tr: [
+    'Yeni projeler, iş birlikleri veya sorularınız için her zaman bizimle iletişime geçebilirsiniz.',
+    'Mekanlara değer katan, zamansız ve yaşamla bütünleşen tasarım çözümleri üretmek için buradayız.',
+  ],
+  en: [
+    'You can always get in touch with us for new projects, collaborations or any questions.',
+    'We are here to create timeless design solutions that add value to spaces and become part of everyday life.',
+  ],
+  de: [
+    'Für neue Projekte, Kooperationen oder Fragen können Sie sich jederzeit gerne an uns wenden.',
+    'Wir entwickeln zeitlose Gestaltungslösungen, die Räumen Wert verleihen und sich selbstverständlich mit dem Leben verbinden.',
+  ],
+  fr: [
+    'Pour un nouveau projet, une collaboration ou toute question, vous pouvez nous contacter à tout moment.',
+    'Nous créons des solutions intemporelles qui donnent de la valeur aux espaces et s’intègrent naturellement à la vie quotidienne.',
+  ],
+  es: [
+    'Puede ponerse en contacto con nosotros en cualquier momento para nuevos proyectos, colaboraciones o cualquier consulta.',
+    'Creamos soluciones de diseño atemporales que aportan valor a los espacios y se integran de forma natural en la vida cotidiana.',
+  ],
+  it: [
+    'Per nuovi progetti, collaborazioni o qualsiasi domanda, può contattarci in qualsiasi momento.',
+    'Creiamo soluzioni di design senza tempo che valorizzano gli spazi e si integrano naturalmente nella vita quotidiana.',
+  ],
+  ru: [
+    'Вы всегда можете связаться с нами по вопросам новых проектов, сотрудничества или получить дополнительную информацию.',
+    'Мы создаём вневременные дизайнерские решения, которые придают пространству ценность и естественно становятся частью повседневной жизни.',
+  ],
+} satisfies Record<Locale, [string, string]>;
+
 export const CONTACT = {
-  meta: { description: { en: TEMP.metaDescription } } satisfies PageMeta,
-  image: { image: { src: contactImage, alt: null } satisfies ImageAsset, projectId: 'walden' },
-  lead: { en: TEMP.headline } as Localized,
-  body: { en: TEMP.short } as Localized,
+  /** The first paragraph doubles as the meta description. */
+  meta: {
+    description: Object.fromEntries(
+      Object.entries(CONTACT_PARAGRAPHS).map(([locale, [first]]) => [locale, first]),
+    ) as Record<Locale, string>,
+  } satisfies PageMeta,
+  headline: {
+    tr: 'Birlikte tasarlayalım',
+    en: 'Let’s design together',
+    de: 'Lassen Sie uns gemeinsam gestalten',
+    fr: 'Imaginons ensemble',
+    es: 'Diseñemos juntos',
+    it: 'Progettiamo insieme',
+    ru: 'Создавайте вместе с нами',
+  } satisfies Record<Locale, string>,
+  paragraphs: CONTACT_PARAGRAPHS,
 };
