@@ -1,0 +1,20 @@
+# Contact form email settings for local testing with `wrangler pages dev`.
+# Copy to `.dev.vars` (git-ignored) and fill in. Never commit real values.
+# In production, set the same variables in Cloudflare Pages → Settings → Variables and Secrets
+# (RESEND_API_KEY as an encrypted secret).
+
+# Resend API key (https://resend.com/api-keys) — secret
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Sender identity. Must be on a domain verified in Resend.
+# For a first test before the domain is verified, Resend's sandbox sender
+# "Atelis Design <onboarding@resend.dev>" works, but it can only deliver to the
+# email address of the Resend account owner.
+CONTACT_FROM_EMAIL="Atelis Design <contact@atelisdesign.com>"
+
+# Routing (not secret). These are also the built-in defaults when a variable is unset.
+# Business notification: To CONTACT_TO_EMAIL, Cc CONTACT_CC_EMAIL, Reply-To the visitor.
+CONTACT_TO_EMAIL=atelisdesign.studio@gmail.com
+CONTACT_CC_EMAIL=baturberrak002@gmail.com
+# Reply-To of the visitor's confirmation email.
+CONTACT_REPLY_EMAIL=atelisdesign.studio@gmail.com

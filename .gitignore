@@ -12,6 +12,12 @@ npm-debug.log*
 .env
 .env.*
 
+# Cloudflare (wrangler) local secrets and state
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler/
+
 # editors / OS
 .vscode/*
 !.vscode/extensions.json
