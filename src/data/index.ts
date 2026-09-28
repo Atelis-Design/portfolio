@@ -13,12 +13,16 @@
 import type { ImageMetadata } from 'astro';
 import { DEFAULT_LOCALE, type Locale } from '../i18n/locales';
 import { format, useUi } from '../i18n/ui';
+import { HOME } from './pages';
 import { PROJECTS } from './projects';
-import type { Align, GalleryBlock, ImageAsset, ImageSize, Localized, ProjectRecord } from './types';
+import type { ImageAsset, Localized, PortfolioCategory, ProjectRecord } from './types';
 
 export { SITE } from './site';
 export { ABOUT, CONTACT, HOME, PROJECTS_PAGE, SERVICES } from './pages';
-export type { ImageAsset, Localized } from './types';
+export type { ImageAsset, Localized, PortfolioCategory } from './types';
+
+/** Portfolio categories in filter order (the Projects page adds "all" in front). */
+export const PORTFOLIO_CATEGORIES: readonly PortfolioCategory[] = ['residential', 'hospitality', 'commercial', 'retail'];
 
 /** Content fallback order after the requested locale (English holds today's placeholder copy). */
 const CONTENT_FALLBACKS: Locale[] = [DEFAULT_LOCALE, 'en'];
@@ -59,11 +63,6 @@ export interface ViewImage {
   alt: string;
 }
 
-export type ViewBlock =
-  | { type: 'image'; image: ViewImage; size: ImageSize; align?: Align }
-  | { type: 'row'; images: ViewImage[]; size: 'wide' | 'inset' }
-  | { type: 'text'; text: string };
-
 export interface ProjectMeta {
   label: string;
   value: string;
@@ -72,15 +71,20 @@ export interface ProjectMeta {
 export interface ProjectSummary {
   id: string;
   title: string;
-  shortDescription: string;
+  category: PortfolioCategory;
+  concept: string;
   cover: ViewImage;
-  hero: ViewImage;
-  meta: ProjectMeta[];
 }
 
 export interface ProjectView extends ProjectSummary {
-  story: string[];
-  gallery: ViewBlock[];
+  /** The finer project type when supplied, else the localized portfolio category. */
+  categoryLabel: string;
+  /** Project text; null when there is none to show. */
+  description: string | null;
+  /** Facts that exist, in display order (location, year, area, scope). */
+  meta: ProjectMeta[];
+  /** Every photograph once: the opening image, then the gallery in order. */
+  images: ViewImage[];
   credits: { role: string; name: string }[];
   seoTitle: string | null;
   seoDescription: string;
@@ -90,29 +94,32 @@ export interface ProjectView extends ProjectSummary {
   next: ProjectSummary;
 }
 
+/** Canonical project order (Projects index, project numbering, previous/next). Home uses homepageOrder. */
 function sortedRecords(): ProjectRecord[] {
-  return PROJECTS;
+  return [...PROJECTS].sort((a, b) => a.listingOrder - b.listingOrder);
 }
 
 /** Only the metadata that actually exists — unknown fields are omitted, not invented. */
 function projectMeta(record: ProjectRecord, locale: Locale): ProjectMeta[] {
   const ui = useUi(locale).project;
   const rows: [string, string | null][] = [
-    [ui.projectType, localize(record.projectType, locale)],
     [ui.location, localize(record.location, locale)],
     [ui.year, record.year ? String(record.year) : null],
     [ui.area, record.area],
+    [ui.scope, localize(record.scope, locale)],
   ];
   return rows.filter((row): row is [string, string] => Boolean(row[1])).map(([label, value]) => ({ label, value }));
 }
 
+/** A project's photographs in viewing order, each once: the opening image, then the gallery. */
+function projectImages(record: ProjectRecord): ImageAsset[] {
+  const seen = new Set<ImageMetadata>();
+  return [record.heroImage, ...record.gallery].filter((asset) => !seen.has(asset.src) && seen.add(asset.src));
+}
+
 /** Number every image of a project so generated alts read "Title — image n of N". */
 function createAltResolver(record: ProjectRecord, locale: Locale) {
-  const images: ImageMetadata[] = [record.heroImage.src];
-  for (const block of record.gallery) {
-    if (block.type === 'image') images.push(block.image.src);
-    if (block.type === 'row') images.push(...block.images.map((image) => image.src));
-  }
+  const images = projectImages(record).map((asset) => asset.src);
   const template = useUi(locale).project.imageAlt;
   return (asset: ImageAsset): ViewImage => {
     const written = localize(asset.alt, locale);
@@ -128,22 +135,19 @@ function toSummary(record: ProjectRecord, locale: Locale): ProjectSummary {
   return {
     id: record.id,
     title: record.title,
-    shortDescription: localize(record.shortDescription, locale),
+    category: record.portfolioCategory,
+    concept: record.concept,
     cover: resolve(record.coverImage ?? record.heroImage),
-    hero: resolve(record.heroImage),
-    meta: projectMeta(record, locale),
   };
 }
 
-function toBlock(block: GalleryBlock, resolve: (asset: ImageAsset) => ViewImage, locale: Locale): ViewBlock {
-  switch (block.type) {
-    case 'image':
-      return { type: 'image', image: resolve(block.image), size: block.size, align: block.align };
-    case 'row':
-      return { type: 'row', images: block.images.map(resolve), size: block.size };
-    case 'text':
-      return { type: 'text', text: localize(block.text, locale) };
-  }
+/**
+ * Project text: the client's project description once supplied; until then the
+ * client-approved Home carousel text for the same project. Never invented.
+ */
+function projectDescription(record: ProjectRecord, locale: Locale): string | null {
+  const slide = HOME.hero.slides.find((item) => item.projectId === record.id);
+  return localize(record.description, locale) ?? localize(slide?.description, locale);
 }
 
 export function getProjectIds(): string[] {
@@ -173,14 +177,16 @@ export function getProject(id: string, locale: Locale): ProjectView | null {
   const record = records[index];
   const resolve = createAltResolver(record, locale);
   const total = records.length;
-  const shortDescription = localize(record.shortDescription, locale);
+  const description = projectDescription(record, locale);
   return {
     ...toSummary(record, locale),
-    story: localize(record.projectStory, locale) ?? [],
-    gallery: record.gallery.map((block) => toBlock(block, resolve, locale)),
+    categoryLabel: localize(record.projectType, locale) ?? useUi(locale).projectsIndex.categories[record.portfolioCategory],
+    description,
+    meta: projectMeta(record, locale),
+    images: projectImages(record).map(resolve),
     credits: record.credits.map((credit) => ({ role: localize(credit.role, locale), name: credit.name })),
     seoTitle: localize(record.seo?.title, locale),
-    seoDescription: localize(record.seo?.description, locale) ?? shortDescription,
+    seoDescription: localize(record.seo?.description, locale) ?? description ?? localize(HOME.meta.description, locale),
     index: index + 1,
     total,
     previous: toSummary(records[(index - 1 + total) % total], locale),

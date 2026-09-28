@@ -1,6 +1,5 @@
 import type { ImageMetadata } from 'astro';
 import type { ImageAsset, ProjectRecord } from './types';
-import { TEMP } from './placeholder';
 
 import casa01 from '../assets/projects/casa-olivia/01.jpg';
 import casa02 from '../assets/projects/casa-olivia/02.jpg';
@@ -52,32 +51,34 @@ const img = (src: ImageMetadata): ImageAsset => ({ src, alt: null });
 
 /**
  * LOCAL PROJECT DATA — temporary source until Sanity.
- * Titles come from the client's asset folders. Everything factual that is
- * unknown (type, location, year, area, credits) is deliberately null/empty.
- * Descriptions and story text are TEMP placeholder copy.
+ *
+ * Titles come from the client's asset folders; category, concept and listing
+ * order are client-approved. Project facts and text are NOT supplied yet:
+ * `description`, `location`, `year`, `area` and `scope` stay null until Batur
+ * provides them (a null field is simply not shown). Never fill them with guesses.
+ *
+ * Until `description` is supplied, the detail page shows the project's
+ * client-approved Home carousel text (src/data/pages.ts, HOME.hero.slides).
+ *
+ * Images: `heroImage` opens the detail page, `gallery` follows in viewing order.
  */
 export const PROJECTS: ProjectRecord[] = [
   {
     id: 'casa-olivia',
     title: 'Casa Olivia',
+    portfolioCategory: 'residential',
+    concept: 'Organic Contemporary / Mediterranean Living',
+    listingOrder: 1,
     projectType: null,
+    // TODO(Batur): project text and facts.
+    description: null,
     location: null,
     year: null,
     area: null,
-    shortDescription: { en: TEMP.short },
-    projectStory: { en: [TEMP.paragraph, TEMP.paragraphAlt] },
+    scope: null,
     heroImage: img(casa01),
     coverImage: img(casa07),
-    gallery: [
-      { type: 'image', image: img(casa02), size: 'wide' },
-      { type: 'row', images: [img(casa04), img(casa05)], size: 'wide' },
-      { type: 'text', text: { en: TEMP.interruption } },
-      { type: 'image', image: img(casa03), size: 'bleed' },
-      { type: 'image', image: img(casa06), size: 'detail', align: 'end' },
-      { type: 'row', images: [img(casa08), img(casa09)], size: 'inset' },
-      { type: 'image', image: img(casa10), size: 'detail', align: 'start' },
-      { type: 'image', image: img(casa07), size: 'wide' },
-    ],
+    gallery: [casa02, casa04, casa05, casa03, casa06, casa08, casa09, casa10, casa07].map(img),
     credits: [],
     featured: true,
     homepageOrder: 4,
@@ -86,22 +87,19 @@ export const PROJECTS: ProjectRecord[] = [
   {
     id: 'l-inconnue',
     title: 'L Inconnue',
+    portfolioCategory: 'residential',
+    concept: 'Modern Classic / Editorial Interior',
+    listingOrder: 4,
     projectType: null,
+    // TODO(Batur): project text and facts.
+    description: null,
     location: null,
     year: null,
     area: null,
-    shortDescription: { en: TEMP.short },
-    projectStory: { en: [TEMP.paragraph, TEMP.paragraphThird] },
+    scope: null,
     heroImage: img(linc01),
     coverImage: img(linc06),
-    gallery: [
-      { type: 'image', image: img(linc02), size: 'wide' },
-      { type: 'row', images: [img(linc05), img(linc06), img(linc07)], size: 'wide' },
-      { type: 'text', text: { en: TEMP.interruption } },
-      { type: 'image', image: img(linc03), size: 'bleed' },
-      { type: 'row', images: [img(linc08), img(linc09)], size: 'inset' },
-      { type: 'image', image: img(linc04), size: 'wide' },
-    ],
+    gallery: [linc02, linc05, linc06, linc07, linc03, linc08, linc09, linc04].map(img),
     credits: [],
     featured: true,
     homepageOrder: 2,
@@ -110,24 +108,19 @@ export const PROJECTS: ProjectRecord[] = [
   {
     id: 'maison-elan',
     title: 'Maison Elan',
+    portfolioCategory: 'residential',
+    concept: 'Contemporary Classic / Sculptural Elegance',
+    listingOrder: 2,
     projectType: null,
+    // TODO(Batur): project text and facts.
+    description: null,
     location: null,
     year: null,
     area: null,
-    shortDescription: { en: TEMP.short },
-    projectStory: { en: [TEMP.paragraphAlt, TEMP.paragraph] },
+    scope: null,
     heroImage: img(elan01),
     coverImage: img(elan02),
-    gallery: [
-      { type: 'image', image: img(elan02), size: 'wide' },
-      { type: 'row', images: [img(elan07), img(elan06)], size: 'wide' },
-      { type: 'text', text: { en: TEMP.interruption } },
-      { type: 'image', image: img(elan04), size: 'bleed' },
-      { type: 'row', images: [img(elan08), img(elan09)], size: 'inset' },
-      { type: 'image', image: img(elan03), size: 'wide' },
-      { type: 'image', image: img(elan10), size: 'detail', align: 'start' },
-      { type: 'image', image: img(elan05), size: 'wide' },
-    ],
+    gallery: [elan02, elan07, elan06, elan04, elan08, elan09, elan03, elan10, elan05].map(img),
     credits: [],
     featured: true,
     homepageOrder: 1,
@@ -136,25 +129,19 @@ export const PROJECTS: ProjectRecord[] = [
   {
     id: 'walden',
     title: 'Walden',
+    portfolioCategory: 'residential',
+    concept: 'Contemporary Alpine / Quiet Luxury',
+    listingOrder: 3,
     projectType: null,
+    // TODO(Batur): project text and facts.
+    description: null,
     location: null,
     year: null,
     area: null,
-    shortDescription: { en: TEMP.short },
-    projectStory: { en: [TEMP.paragraphThird, TEMP.paragraphAlt] },
+    scope: null,
     heroImage: img(walden01),
     coverImage: img(walden05),
-    gallery: [
-      { type: 'row', images: [img(walden02), img(walden04)], size: 'wide' },
-      { type: 'image', image: img(walden05), size: 'bleed' },
-      { type: 'text', text: { en: TEMP.interruption } },
-      { type: 'row', images: [img(walden06), img(walden03)], size: 'wide' },
-      { type: 'image', image: img(walden08), size: 'detail', align: 'end' },
-      { type: 'image', image: img(walden07), size: 'wide' },
-      { type: 'image', image: img(walden09), size: 'wide' },
-      { type: 'row', images: [img(walden10), img(walden11)], size: 'inset' },
-      { type: 'image', image: img(walden12), size: 'wide' },
-    ],
+    gallery: [walden02, walden04, walden05, walden06, walden03, walden08, walden07, walden09, walden10, walden11, walden12].map(img),
     credits: [],
     featured: true,
     homepageOrder: 3,

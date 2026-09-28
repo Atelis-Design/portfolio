@@ -8,6 +8,9 @@ import heroSlide2 from '../assets/home/hero(2).jpeg';
 import heroSlide3 from '../assets/home/hero(3).png';
 import heroSlide4 from '../assets/home/hero(4).jpg';
 import servicesImage from '../assets/projects/casa-olivia/05.jpg';
+// Client-supplied previews for the Projects index "Coming soon" frames.
+import comingSoon01 from '../assets/projects-index/coming-soon-01.png';
+import comingSoon02 from '../assets/projects-index/coming-soon-02.png';
 
 /** Page-level copy. Non-Home pages remain TEMP until their content phase. */
 
@@ -138,9 +141,42 @@ export const HOME = {
   },
 };
 
+/**
+ * Projects index hero, complete in every locale (no fallback). The Turkish copy is
+ * client-approved; the eyebrow is the localized navigation label (ui.nav.projects).
+ * `title` is split into its display lines.
+ */
+const PROJECTS_LEAD = {
+  tr: 'Her proje, bir mekânın, insanın ve amacın yansımasıdır. Zamansız, düşünülmüş ve yaşayan mekânlar tasarlıyoruz.',
+  en: 'Every project reflects a place, a person and a purpose. We design spaces that are timeless, considered and alive.',
+  de: 'Jedes Projekt spiegelt einen Ort, einen Menschen und eine Absicht wider. Wir gestalten zeitlose, durchdachte und lebendige Räume.',
+  fr: 'Chaque projet est le reflet d’un lieu, d’une personne et d’une intention. Nous concevons des espaces intemporels, réfléchis et vivants.',
+  es: 'Cada proyecto es el reflejo de un lugar, de una persona y de un propósito. Diseñamos espacios atemporales, cuidadosamente pensados y llenos de vida.',
+  it: 'Ogni progetto è il riflesso di un luogo, di una persona e di uno scopo. Progettiamo spazi senza tempo, meditati e pieni di vita.',
+  ru: 'Каждый проект — отражение пространства, человека и его замысла. Мы создаём вневременные, продуманные и живые пространства.',
+} satisfies Record<Locale, string>;
+
 export const PROJECTS_PAGE = {
-  meta: { description: { en: TEMP.metaDescription } } satisfies PageMeta,
-  intro: { en: TEMP.short } as Localized,
+  meta: { description: PROJECTS_LEAD } satisfies PageMeta,
+  title: {
+    tr: ['Ruhunu', 'Yansıtan Mekanlar'],
+    en: ['Spaces with', 'a Soul of Their Own'],
+    de: ['Räume', 'mit Seele'],
+    fr: ['Des espaces', 'qui ont une âme'],
+    es: ['Espacios', 'con alma'],
+    it: ['Spazi', 'con un’anima'],
+    ru: ['Пространства', 'с душой'],
+  } satisfies Record<Locale, [string, string]>,
+  lead: PROJECTS_LEAD,
+  /**
+   * "Coming soon" previews at 1-based positions in the unfiltered grid.
+   * Layout only: not projects — no number, title, route or link, never counted.
+   * Revisit when a project is added.
+   */
+  comingSoon: [
+    { position: 3, image: { src: comingSoon01, alt: null } },
+    { position: 6, image: { src: comingSoon02, alt: null } },
+  ] satisfies { position: number; image: ImageAsset }[],
 };
 
 export const ABOUT = {

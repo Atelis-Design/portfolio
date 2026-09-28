@@ -1,20 +1,64 @@
 ---
+/**
+ * Projects index: editorial hero, category filter, and a gallery grid of the
+ * published projects with quiet "Coming soon" frames at editorial positions.
+ *
+ * Desktop and tablet reuse Home's viewport shell: header and footer stay in view
+ * and only this page's content scrolls (see the `main` rule below). Phones keep
+ * normal document scrolling. The filter is a few lines of vanilla JS; without
+ * JavaScript every project is shown.
+ */
 import Photo from '../../../components/Photo.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import { PROJECTS_PAGE, getProjects, localize } from '../../../data';
+import { HOME, PORTFOLIO_CATEGORIES, PROJECTS_PAGE, getProjects, localize, viewImage } from '../../../data';
 import { localeStaticPaths, type Locale } from '../../../i18n/locales';
 import { projectPath } from '../../../i18n/routes';
 import { useUi } from '../../../i18n/ui';
-import { imageSize } from '../../../lib/images';
 
 export const getStaticPaths = localeStaticPaths;
 
 const locale = Astro.params.locale as Locale;
 const ui = useUi(locale);
-const projects = await Promise.all(
-  getProjects(locale).map(async (project) => ({ ...project, portrait: (await imageSize(project.cover.src)).portrait })),
-);
+const t = ui.projectsIndex;
 const pad = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * Card photographs are the Home carousel images (one slide per project, HOME.hero.slides),
+ * so Home and Projects show the same picture of each project. A project without a slide
+ * falls back to its own cover image.
+ */
+const slideImages = new Map(HOME.hero.slides.map((slide) => [slide.projectId, slide.image]));
+
+/** Published projects in listing order; the counter and card numbers come from here. */
+const projects = getProjects(locale).map((project, i) => {
+  const slideImage = slideImages.get(project.id);
+  return {
+    ...project,
+    number: pad(i + 1),
+    href: projectPath(locale, project.id),
+    image: slideImage ? viewImage(slideImage, locale, project.title) : project.cover,
+  };
+});
+const total = pad(projects.length);
+
+/** Unfiltered grid: projects in order, with Coming soon previews at their editorial positions. */
+type ComingSoon = (typeof PROJECTS_PAGE.comingSoon)[number];
+type Slot = { kind: 'project'; project: (typeof projects)[number] } | { kind: 'soon'; soon: ComingSoon };
+const slots: Slot[] = [];
+const queue = [...projects];
+const lastSoon = Math.max(0, ...PROJECTS_PAGE.comingSoon.map((soon) => soon.position));
+for (let position = 1; queue.length > 0 || position <= lastSoon; position++) {
+  const soon = PROJECTS_PAGE.comingSoon.find((item) => item.position === position);
+  if (soon) slots.push({ kind: 'soon', soon });
+  else {
+    const project = queue.shift();
+    if (project) slots.push({ kind: 'project', project });
+  }
+}
+
+const filters = ['all', ...PORTFOLIO_CATEGORIES] as const;
+/** Concept descriptors are written in English; mark them so capitals and speech follow English rules. */
+const conceptLang = locale === 'en' ? undefined : 'en';
 ---
 
 <BaseLayout
@@ -22,177 +66,482 @@ const pad = (n: number) => String(n).padStart(2, '0');
   title={ui.nav.projects}
   description={localize(PROJECTS_PAGE.meta.description, locale)}
   current="projects"
+  shell="viewport"
 >
-  <header class="page-intro container grid">
-    <h1 class="page-intro__title">{ui.nav.projects}</h1>
-    <p class="page-intro__lead prose">{localize(PROJECTS_PAGE.intro, locale)}</p>
-  </header>
+  <div class="projects">
+    <header class="projects-hero container">
+      <p class="projects-hero__eyebrow">{ui.nav.projects}</p>
+      <h1 class="projects-hero__title">
+        {localize(PROJECTS_PAGE.title, locale).map((line) => <span>{line}</span>)}
+      </h1>
+      <div class="projects-hero__intro">
+        <span class="projects-hero__rule" aria-hidden="true"></span>
+        <p class="projects-hero__lead">{localize(PROJECTS_PAGE.lead, locale)}</p>
+      </div>
+      <p class="projects-hero__count" aria-hidden="true">
+        <span>01</span>
+        <span class="projects-hero__count-line"></span>
+        <span>{total}</span>
+      </p>
+    </header>
 
-  <ol class="entries container" role="list">
-    {
-      projects.map((project, i) => {
-        const { portrait } = project;
-        const href = projectPath(locale, project.id);
-        return (
-          <li class:list={['entry grid', { 'entry--mirror': i % 2 === 1, 'entry--portrait': portrait }]}>
-            <div class="entry__media">
-              <Photo
-                image={project.cover}
-                sizes={portrait ? '(min-width: 64em) 40vw, 100vw' : '(min-width: 64em) 64vw, 100vw'}
-                priority={i === 0}
-              />
-            </div>
-            <div class="entry__text">
-              <p class="entry__index">
-                {pad(i + 1)} / {pad(projects.length)}
-              </p>
-              <h2 class="entry__title">
-                <a href={href}>{project.title}</a>
-              </h2>
-              {project.meta.length > 0 && (
-                <dl class="entry__meta">
-                  {project.meta.map((item) => (
-                    <div>
-                      <dt class="visually-hidden">{item.label}</dt>
-                      <dd>{item.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-              <p class="entry__description">{project.shortDescription}</p>
-              <span class="entry__cta link-arrow" aria-hidden="true">
-                {ui.common.viewProject}
-              </span>
-            </div>
-          </li>
-        );
-      })
-    }
-  </ol>
+    <div class="projects-filter container" role="group" aria-label={t.filterLabel} data-filter>
+      {
+        filters.map((key) => (
+          <button class="projects-filter__button" type="button" aria-pressed={key === 'all' ? 'true' : 'false'} data-category={key}>
+            {t.categories[key]}
+          </button>
+        ))
+      }
+    </div>
+
+    <ul class="projects-grid container" role="list">
+      {
+        slots.map((slot) =>
+          slot.kind === 'project' ? (
+            <li class="card card--project" data-card="project" data-category={slot.project.category}>
+              <div class="card__frame">
+                <Photo
+                  image={{ ...slot.project.image, alt: '' }}
+                  sizes="(min-width: 64em) 31vw, (min-width: 40em) 47vw, 92vw"
+                  priority={slot.project.number === '01'}
+                />
+              </div>
+              <div class="card__caption">
+                <h2 class="card__title">
+                  <a class="card__link" href={slot.project.href}>
+                    {slot.project.title}
+                  </a>
+                </h2>
+                <span class="card__index" aria-hidden="true">
+                  {slot.project.number}
+                  <span class="card__index-line" />
+                </span>
+                <p class="card__concept" lang={conceptLang}>
+                  {slot.project.concept}
+                </p>
+              </div>
+            </li>
+          ) : (
+            <li class="card card--soon" data-card="soon">
+              <div class="card__frame">
+                <Photo
+                  image={{ src: slot.soon.image.src, alt: '' }}
+                  sizes="(min-width: 64em) 31vw, (min-width: 40em) 47vw, 92vw"
+                />
+                <p class="card__soon">{t.comingSoon}</p>
+              </div>
+            </li>
+          ),
+        )
+      }
+    </ul>
+
+    <p class="projects-empty container" role="status" data-empty data-message={t.empty}></p>
+  </div>
 </BaseLayout>
 
+<script>
+  document.querySelectorAll<HTMLElement>('[data-filter]').forEach((filter) => {
+    const root = filter.parentElement;
+    if (!root) return;
+    const buttons = [...filter.querySelectorAll<HTMLButtonElement>('button[data-category]')];
+    const cards = [...root.querySelectorAll<HTMLElement>('[data-card]')];
+    const empty = root.querySelector<HTMLElement>('[data-empty]');
+
+    // "all" shows every project and the Coming soon frames; a category shows only its projects.
+    const apply = (category: string) => {
+      let shown = 0;
+      for (const card of cards) {
+        const isProject = card.dataset.card === 'project';
+        const visible = category === 'all' || (isProject && card.dataset.category === category);
+        card.hidden = !visible;
+        if (visible && isProject) shown += 1;
+      }
+      buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.category === category)));
+      if (empty) empty.textContent = shown === 0 ? (empty.dataset.message ?? '') : '';
+    };
+
+    buttons.forEach((button) => button.addEventListener('click', () => apply(button.dataset.category ?? 'all')));
+  });
+</script>
+
 <style>
-  .entries {
+  /*
+   * Fixed chrome: in the viewport shell (≥ 48em) `main` is the grid row between
+   * header and footer; on this page it becomes the scroll area. `main` itself
+   * scrolls (not a wrapper), so the skip link's focus target also scrolls by
+   * keyboard. The hairline closes the area above the footer at every width.
+   */
+  :global(main:has(> .projects)) {
+    border-bottom: var(--rule);
+  }
+
+  @media (min-width: 48em) {
+    :global(main:has(> .projects)) {
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+      scrollbar-gutter: stable;
+    }
+  }
+
+  /*
+   * Once the page container reaches its max width it is centred; a gutter on both
+   * sides keeps it centred on the same axis as the header and footer (classic
+   * scrollbars sit inside this scroll area, not beside the whole page).
+   */
+  @media (min-width: 112rem) {
+    :global(main:has(> .projects)) {
+      scrollbar-gutter: stable both-edges;
+    }
+  }
+
+  .projects {
+    padding-bottom: var(--space-xl);
+    font-family: var(--font-brand);
+  }
+
+  /* Hero ------------------------------------------------------------------ */
+
+  /* One column on small screens; the 12-column page grid from 64em */
+  .projects-hero {
     display: grid;
-    gap: var(--space-section);
-  }
-
-  .entry {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: var(--grid-gap);
     row-gap: var(--space-md);
-    position: relative;
+    padding-top: var(--space-lg);
   }
 
-  .entry__media {
+  .projects-hero__eyebrow {
+    font-size: var(--text-sm);
+    line-height: 1.4;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-primary);
+  }
+
+  .projects-hero__title {
+    margin-top: calc(-1 * var(--space-xs));
+    font-family: var(--font-brand);
+    font-size: var(--text-xl);
+    line-height: 1.02;
+  }
+
+  .projects-hero__title span {
     display: block;
+  }
+
+  .projects-hero__intro {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-lg);
+    font-size: var(--text-md);
+  }
+
+  /* Short architectural rule, level with the first line of the lead */
+  .projects-hero__rule {
+    display: none;
+    flex: 0 0 clamp(3rem, 6vw, 6.5rem);
+    height: 1px;
+    margin-top: 0.72em;
+    background: var(--color-text-secondary);
+  }
+
+  .projects-hero__lead {
+    max-width: 34rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+  }
+
+  /* 01 — NN: same numeral treatment as the Home slide counter */
+  .projects-hero__count {
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-numeric);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums lining-nums;
+    color: var(--color-text-primary);
+  }
+
+  .projects-hero__count-line {
+    width: 1.5rem;
+    height: 1px;
+    background: currentColor;
+  }
+
+  @media (min-width: 64em) {
+    .projects-hero {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-template-rows: auto auto;
+      row-gap: 0;
+    }
+
+    .projects-hero__eyebrow {
+      grid-column: 1 / span 6;
+      grid-row: 1;
+      margin-bottom: var(--space-xs);
+    }
+
+    .projects-hero__title {
+      grid-column: 1 / span 6;
+      grid-row: 2;
+      margin-top: 0;
+    }
+
+    .projects-hero__intro {
+      grid-column: 7 / -1;
+      grid-row: 2;
+      align-self: start;
+      padding-top: 0.35em;
+    }
+
+    .projects-hero__rule {
+      display: block;
+    }
+
+    .projects-hero__count {
+      grid-column: 7 / -1;
+      grid-row: 2;
+      align-self: end;
+    }
+  }
+
+  /* Category filter -------------------------------------------------------- */
+
+  .projects-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-lg);
+    margin-top: var(--space-md);
+  }
+
+  /* Text navigation: no pills or fills; the active category carries a hairline underline */
+  .projects-filter__button {
+    min-height: 2.75rem;
+    padding: 0;
+    background: linear-gradient(currentColor, currentColor) no-repeat 0 calc(100% - 0.65rem) / 0 1px;
+    border: 0;
+    font-family: var(--font-brand);
+    font-size: var(--text-xs);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition:
+      color var(--duration-fast) var(--ease),
+      background-size var(--duration-fast) var(--ease);
+  }
+
+  .projects-filter__button:hover {
+    color: var(--color-text-primary);
+  }
+
+  .projects-filter__button[aria-pressed='true'] {
+    color: var(--color-text-primary);
+    background-size: calc(100% - 0.18em) 1px;
+  }
+
+  @media (min-width: 48em) {
+    .projects-filter__button {
+      font-size: var(--text-sm);
+    }
+  }
+
+  /* Grid ------------------------------------------------------------------- */
+
+  .projects-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-lg) var(--grid-gap);
+    margin-top: var(--space-sm);
+  }
+
+  /* One or two columns: projects first, the Coming soon frames after them */
+  .card--soon {
+    order: 1;
+  }
+
+  @media (min-width: 40em) {
+    .projects-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* Three columns: Coming soon frames return to their editorial positions */
+  @media (min-width: 64em) {
+    .projects-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card--soon {
+      order: 0;
+    }
+  }
+
+  .card {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: var(--space-sm);
+    min-width: 0;
+  }
+
+  .card[hidden] {
+    display: none;
+  }
+
+  /* Every image sits in the same 16:9 frame; the frame reserves the space (no layout shift) */
+  .card__frame {
+    aspect-ratio: 16 / 9;
     overflow: hidden;
     background: var(--color-placeholder);
   }
 
-  .entry__media :global(img) {
+  .card__frame :global(img) {
     width: 100%;
-    transition: transform var(--duration-slow) var(--ease);
+    height: 100%;
+    object-fit: cover;
+    transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .entry:hover .entry__media :global(img) {
-    transform: scale(1.02);
-  }
-
-  .entry__text {
+  .card__caption {
     display: grid;
-    gap: var(--space-sm);
-    align-content: end;
-    justify-items: start;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: var(--space-md);
+    row-gap: 0.15rem;
   }
 
-  .entry__index {
-    font-size: var(--text-xs);
-    color: var(--color-text-muted);
-    font-variant-numeric: tabular-nums;
+  .card__title {
+    font-family: var(--font-brand);
+    font-size: clamp(1.1875rem, 1.05rem + 0.35vw, 1.375rem);
+    line-height: 1.2;
+    letter-spacing: 0;
   }
 
-  .entry__title {
-    font-size: var(--text-xl);
-  }
-
-  .entry__title a {
+  .card__link {
     text-decoration: none;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
   }
 
-  /* Whole row is clickable via the title link; keeps a single tab stop per project. */
-  .entry__title a::after {
+  /* The whole card is the title link's hit area: one tab stop per project */
+  .card__link::after {
     content: '';
     position: absolute;
     inset: 0;
   }
 
-  .entry:hover .entry__title a {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.15em;
+  .card__link:focus-visible {
+    outline: none;
   }
 
-  .entry__meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 var(--space-md);
+  .card__link:focus-visible::after {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 4px;
+  }
+
+  .card__index {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-numeric);
     font-size: var(--text-xs);
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums lining-nums;
+    color: var(--color-text-secondary);
+  }
+
+  .card__index-line {
+    width: 2.5rem;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.5;
+    transition: opacity var(--duration-slow) var(--ease);
+  }
+
+  .card__concept {
+    grid-column: 1 / -1;
+    font-size: var(--text-2xs);
+    line-height: 1.5;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--color-text-muted);
   }
 
-  .entry__description {
-    max-width: 32ch;
+  /*
+   * Coming soon: the supplied preview in the same frame, with a soft local shade
+   * behind a centred light label. Not a project: no number, title, link or zoom.
+   */
+  .card--soon .card__frame {
+    position: relative;
+  }
+
+  .card--soon .card__frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    /* wide enough for the longest label (IT "Prossimamente") on the narrowest card */
+    background: radial-gradient(
+      ellipse 55% 34% at 50% 50%,
+      color-mix(in srgb, var(--color-text-primary) 55%, transparent),
+      transparent
+    );
+    pointer-events: none;
+  }
+
+  .card__soon {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    /* balances the trailing letter-spacing so the word sits on the frame's centre */
+    padding-left: 0.24em;
+    font-size: var(--text-xs);
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-surface-primary);
+    /* a soft halo keeps the letters clear where a label end meets a sunlit highlight */
+    text-shadow:
+      0 1px 2px color-mix(in srgb, var(--color-text-primary) 50%, transparent),
+      0 0 10px color-mix(in srgb, var(--color-text-primary) 55%, transparent);
+  }
+
+  /* Hover (pointer devices): a slow, slight zoom inside the frame; the card never moves */
+  @media (hover: hover) and (pointer: fine) {
+    .card--project:hover .card__link {
+      text-decoration-line: underline;
+    }
+
+    .card--project:hover .card__index-line {
+      opacity: 1;
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .card--project:hover .card__frame :global(img) {
+      transform: scale(1.02);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card__frame :global(img) {
+      transition: none;
+    }
+  }
+
+  /* Empty category: a small editorial note */
+  .projects-empty {
+    font-size: var(--text-md);
+    line-height: 1.45;
     color: var(--color-text-secondary);
   }
 
-  .entry__cta {
-    margin-top: var(--space-xs);
-  }
-
-  @media (min-width: 40em) and (max-width: 63.99em) {
-    .entry--portrait .entry__media {
-      grid-column: 1 / span 8;
-    }
-  }
-
-  @media (min-width: 64em) {
-    .entry {
-      align-items: end;
-    }
-
-    .entry__media {
-      grid-column: 1 / span 8;
-      grid-row: 1;
-    }
-
-    .entry__text {
-      grid-column: 10 / span 3;
-      grid-row: 1;
-    }
-
-    .entry--portrait .entry__media {
-      grid-column: 2 / span 5;
-    }
-
-    .entry--portrait .entry__text {
-      grid-column: 8 / span 4;
-    }
-
-    .entry--mirror .entry__media {
-      grid-column: 5 / span 8;
-    }
-
-    .entry--mirror .entry__text {
-      grid-column: 1 / span 3;
-    }
-
-    .entry--mirror.entry--portrait .entry__media {
-      grid-column: 7 / span 5;
-    }
-
-    .entry--mirror.entry--portrait .entry__text {
-      grid-column: 2 / span 4;
-    }
+  .projects-empty:not(:empty) {
+    padding-block: var(--space-lg) var(--space-xl);
   }
 </style>
