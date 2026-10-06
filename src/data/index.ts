@@ -13,12 +13,16 @@
 import type { ImageMetadata } from 'astro';
 import { DEFAULT_LOCALE, type Locale } from '../i18n/locales';
 import { format, useUi } from '../i18n/ui';
+import { HOME } from './pages';
 import { PROJECTS } from './projects';
-import type { Align, GalleryBlock, ImageAsset, ImageSize, Localized, ProjectRecord } from './types';
+import type { ImageAsset, Localized, PortfolioCategory, ProjectRecord } from './types';
 
 export { SITE } from './site';
 export { ABOUT, CONTACT, HOME, PROJECTS_PAGE, SERVICES } from './pages';
-export type { ImageAsset, Localized } from './types';
+export type { ImageAsset, Localized, PortfolioCategory } from './types';
+
+/** Portfolio categories in filter order (the Projects page adds "all" in front). */
+export const PORTFOLIO_CATEGORIES: readonly PortfolioCategory[] = ['residential', 'hospitality', 'commercial', 'retail'];
 
 /** Content fallback order after the requested locale (English holds today's placeholder copy). */
 const CONTENT_FALLBACKS: Locale[] = [DEFAULT_LOCALE, 'en'];
@@ -57,12 +61,9 @@ export function fallbackLang(value: Localized<unknown> | null | undefined, local
 export interface ViewImage {
   src: ImageMetadata;
   alt: string;
+  /** Focal point for the project viewer's 16:9 crop, when the image needs one. */
+  position?: string;
 }
-
-export type ViewBlock =
-  | { type: 'image'; image: ViewImage; size: ImageSize; align?: Align }
-  | { type: 'row'; images: ViewImage[]; size: 'wide' | 'inset' }
-  | { type: 'text'; text: string };
 
 export interface ProjectMeta {
   label: string;
@@ -72,15 +73,24 @@ export interface ProjectMeta {
 export interface ProjectSummary {
   id: string;
   title: string;
-  shortDescription: string;
+  category: PortfolioCategory;
+  concept: string;
   cover: ViewImage;
-  hero: ViewImage;
-  meta: ProjectMeta[];
 }
 
 export interface ProjectView extends ProjectSummary {
-  story: string[];
-  gallery: ViewBlock[];
+  /** The localized portfolio category. */
+  categoryLabel: string;
+  /** One concise sentence for the information panel; null when there is none. */
+  intro: string | null;
+  /** Full project text: kept for the meta description and later editorial use, not rendered on the page. */
+  description: string | null;
+  /** Facts that exist, in display order (project type, location, year, area, scope). */
+  meta: ProjectMeta[];
+  /** Every photograph once: the opening image, then the gallery in order. */
+  images: ViewImage[];
+  /** Canonical Home hero used by social previews for this project. */
+  socialImage: ViewImage;
   credits: { role: string; name: string }[];
   seoTitle: string | null;
   seoDescription: string;
@@ -90,8 +100,12 @@ export interface ProjectView extends ProjectSummary {
   next: ProjectSummary;
 }
 
+/**
+ * Canonical project order (Projects index, project numbering, previous/next).
+ * The Home carousel renders HOME.hero.slides, listed in this same order; `homepageOrder` mirrors it.
+ */
 function sortedRecords(): ProjectRecord[] {
-  return PROJECTS;
+  return [...PROJECTS].sort((a, b) => a.listingOrder - b.listingOrder);
 }
 
 /** Only the metadata that actually exists — unknown fields are omitted, not invented. */
@@ -102,25 +116,29 @@ function projectMeta(record: ProjectRecord, locale: Locale): ProjectMeta[] {
     [ui.location, localize(record.location, locale)],
     [ui.year, record.year ? String(record.year) : null],
     [ui.area, record.area],
+    [ui.scope, localize(record.scope, locale)],
   ];
   return rows.filter((row): row is [string, string] => Boolean(row[1])).map(([label, value]) => ({ label, value }));
 }
 
+/** A project's photographs in viewing order, each once: the opening image, then the gallery. */
+function projectImages(record: ProjectRecord): ImageAsset[] {
+  const seen = new Set<ImageMetadata>();
+  return [record.heroImage, ...record.gallery].filter((asset) => !seen.has(asset.src) && seen.add(asset.src));
+}
+
 /** Number every image of a project so generated alts read "Title — image n of N". */
 function createAltResolver(record: ProjectRecord, locale: Locale) {
-  const images: ImageMetadata[] = [record.heroImage.src];
-  for (const block of record.gallery) {
-    if (block.type === 'image') images.push(block.image.src);
-    if (block.type === 'row') images.push(...block.images.map((image) => image.src));
-  }
+  const images = projectImages(record).map((asset) => asset.src);
   const template = useUi(locale).project.imageAlt;
-  return (asset: ImageAsset): ViewImage => {
+  const alt = (asset: ImageAsset): string => {
     const written = localize(asset.alt, locale);
-    if (written) return { src: asset.src, alt: written };
-    const position = images.indexOf(asset.src);
-    if (position === -1) return { src: asset.src, alt: record.title };
-    return { src: asset.src, alt: format(template, { title: record.title, n: position + 1, total: images.length }) };
+    if (written) return written;
+    const index = images.indexOf(asset.src);
+    if (index === -1) return record.title;
+    return format(template, { title: record.title, n: index + 1, total: images.length });
   };
+  return (asset: ImageAsset): ViewImage => ({ src: asset.src, alt: alt(asset), position: asset.position });
 }
 
 function toSummary(record: ProjectRecord, locale: Locale): ProjectSummary {
@@ -128,22 +146,16 @@ function toSummary(record: ProjectRecord, locale: Locale): ProjectSummary {
   return {
     id: record.id,
     title: record.title,
-    shortDescription: localize(record.shortDescription, locale),
+    category: record.portfolioCategory,
+    concept: record.concept,
     cover: resolve(record.coverImage ?? record.heroImage),
-    hero: resolve(record.heroImage),
-    meta: projectMeta(record, locale),
   };
 }
 
-function toBlock(block: GalleryBlock, resolve: (asset: ImageAsset) => ViewImage, locale: Locale): ViewBlock {
-  switch (block.type) {
-    case 'image':
-      return { type: 'image', image: resolve(block.image), size: block.size, align: block.align };
-    case 'row':
-      return { type: 'row', images: block.images.map(resolve), size: block.size };
-    case 'text':
-      return { type: 'text', text: localize(block.text, locale) };
-  }
+/** Meta description length: the project text's opening sentence (the full text is too long for a snippet). */
+function firstSentence(text: string): string {
+  const end = text.search(/[.!?](\s|$)/);
+  return end === -1 ? text : text.slice(0, end + 1);
 }
 
 export function getProjectIds(): string[] {
@@ -173,14 +185,27 @@ export function getProject(id: string, locale: Locale): ProjectView | null {
   const record = records[index];
   const resolve = createAltResolver(record, locale);
   const total = records.length;
-  const shortDescription = localize(record.shortDescription, locale);
+  const intro = localize(record.heroIntro, locale);
+  const description = localize(record.description, locale);
+  /** Meta description source: the project description, else the panel sentence. */
+  const summary = description ?? intro;
+  const socialAsset = HOME.hero.slides.find((slide) => slide.projectId === record.id)?.image ?? record.heroImage;
   return {
     ...toSummary(record, locale),
-    story: localize(record.projectStory, locale) ?? [],
-    gallery: record.gallery.map((block) => toBlock(block, resolve, locale)),
+    categoryLabel: useUi(locale).projectsIndex.categories[record.portfolioCategory],
+    intro,
+    description,
+    meta: projectMeta(record, locale),
+    images: projectImages(record).map(resolve),
+    socialImage: {
+      src: socialAsset.src,
+      alt: localize(socialAsset.alt, locale) ?? `${record.title} — Atelis Design`,
+    },
     credits: record.credits.map((credit) => ({ role: localize(credit.role, locale), name: credit.name })),
     seoTitle: localize(record.seo?.title, locale),
-    seoDescription: localize(record.seo?.description, locale) ?? shortDescription,
+    seoDescription:
+      localize(record.seo?.description, locale) ??
+      (summary ? firstSentence(summary) : localize(HOME.meta.description, locale)),
     index: index + 1,
     total,
     previous: toSummary(records[(index - 1 + total) % total], locale),

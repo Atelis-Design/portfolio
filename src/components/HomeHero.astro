@@ -19,6 +19,7 @@ import { HOME, SITE, fallbackLang, getProjectSummary, localize, viewImage } from
 import type { Locale } from '../i18n/locales';
 import { projectPath } from '../i18n/routes';
 import { format, useUi } from '../i18n/ui';
+import { imageSources } from '../lib/images';
 import Photo from './Photo.astro';
 
 interface Props {
@@ -51,6 +52,7 @@ const slides = HOME.hero.slides.flatMap((slide) => {
 const total = slides.length;
 const pad = (n: number) => String(n).padStart(2, '0');
 const first = slides[0];
+const sources = await Promise.all(slides.map((slide) => imageSources(slide.image.src)));
 ---
 
 <section
@@ -71,7 +73,22 @@ const first = slides[0];
           style={`--pos-mobile: ${slide.mobilePosition}`}
           data-slide-media
         >
-          <Photo image={slide.image} sizes="100vw" priority={i === 0} deferred={i !== 0} />
+          {
+            i === 0 ? (
+              <Photo image={slide.image} sizes="100vw" priority />
+            ) : (
+              <img
+                alt=""
+                width={sources[i].width}
+                height={sources[i].height}
+                sizes="100vw"
+                decoding="async"
+                fetchpriority="low"
+                data-src={sources[i].src}
+                data-srcset={sources[i].srcset}
+              />
+            )
+          }
         </li>
       ))
     }
@@ -167,14 +184,32 @@ const first = slides[0];
 
     let index = 0;
     let timer: number | undefined;
+    let warmTimer: number | undefined;
+    let showRequest = 0;
     let paused = reducedMotion; // user-controlled pause (button / reduced motion)
     let held = false; // temporary hold while keyboard focus is inside the hero
 
     buttons?.removeAttribute('hidden');
 
-    const show = (next: number, announce = false) => {
+    const loadMedia = async (next: number) => {
+      const image = media[next]?.querySelector<HTMLImageElement>('img');
+      const src = image?.dataset.src;
+      if (!image || !src) return;
+      const srcset = image.dataset.srcset;
+      if (srcset) image.srcset = srcset;
+      image.src = src;
+      delete image.dataset.src;
+      delete image.dataset.srcset;
+      await image.decode().catch(() => undefined);
+    };
+
+    const show = async (next: number, announce = false) => {
+      const request = ++showRequest;
+      const nextIndex = (next + slides.length) % slides.length;
+      await loadMedia(nextIndex);
+      if (request !== showRequest) return;
       status?.setAttribute('aria-live', announce ? 'polite' : 'off');
-      index = (next + slides.length) % slides.length;
+      index = nextIndex;
       slides.forEach((slide, i) => {
         const active = i === index;
         slide.classList.toggle('is-active', active);
@@ -191,10 +226,19 @@ const first = slides[0];
       }
     };
 
-    const stop = () => window.clearInterval(timer);
+    const stop = () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(warmTimer);
+    };
     const start = () => {
       stop();
-      if (!paused && !held) timer = window.setInterval(() => show(index + 1), interval);
+      if (!paused && !held) {
+        warmTimer = window.setTimeout(() => void loadMedia((index + 1) % slides.length), Math.max(0, interval - 3000));
+        timer = window.setTimeout(async () => {
+          await show(index + 1);
+          start();
+        }, interval);
+      }
     };
 
     const setPaused = (value: boolean) => {
@@ -205,12 +249,10 @@ const first = slides[0];
     };
 
     hero.querySelector('[data-hero-prev]')?.addEventListener('click', () => {
-      show(index - 1, true);
-      start();
+      void show(index - 1, true).then(start);
     });
     hero.querySelector('[data-hero-next]')?.addEventListener('click', () => {
-      show(index + 1, true);
-      start();
+      void show(index + 1, true).then(start);
     });
     toggle?.addEventListener('click', () => setPaused(!paused));
 
@@ -237,7 +279,7 @@ const first = slides[0];
     position: relative;
   }
 
-  @media (min-width: 48em) {
+  @media (min-width: 48em) and (min-height: 36em) {
     .hero {
       width: 100%;
       height: 100%;
@@ -297,7 +339,7 @@ const first = slides[0];
     background: var(--color-placeholder);
   }
 
-  @media (min-width: 48em) {
+  @media (min-width: 48em) and (min-height: 36em) {
     .hero__media {
       position: absolute;
       inset: 0;
@@ -323,7 +365,7 @@ const first = slides[0];
     object-position: var(--pos-mobile, 50% 50%);
   }
 
-  @media (min-width: 48em) {
+  @media (min-width: 48em) and (min-height: 36em) {
     .hero__frame :global(img) {
       object-position: 50% 50%;
     }
@@ -334,7 +376,7 @@ const first = slides[0];
     display: grid;
   }
 
-  @media (min-width: 48em) {
+  @media (min-width: 48em) and (min-height: 36em) {
     .hero__layer {
       position: absolute;
       inset: 0;
@@ -352,7 +394,7 @@ const first = slides[0];
     padding-block: var(--space-md) var(--space-sm);
   }
 
-  @media (min-width: 48em) {
+  @media (min-width: 48em) and (min-height: 36em) {
     .hero__texts {
       width: min(36rem, 100%);
       padding: 0;
@@ -381,7 +423,7 @@ const first = slides[0];
     pointer-events: auto;
   }
 
-  @media (min-width: 48em) {
+  @media (min-width: 48em) and (min-height: 36em) {
     .hero__text {
       row-gap: var(--space-md);
     }
@@ -411,7 +453,7 @@ const first = slides[0];
     color: var(--color-text-secondary);
   }
 
-  @media (min-width: 48em) {
+  @media (min-width: 48em) and (min-height: 36em) {
     .hero__description {
       color: inherit;
     }
@@ -437,9 +479,11 @@ const first = slides[0];
       color var(--duration-fast) var(--ease);
   }
 
-  .hero__cta:hover {
-    background: var(--tone-fg);
-    color: var(--tone-inverse);
+  @media (hover: hover) and (pointer: fine) {
+    .hero__cta:hover {
+      background: var(--tone-fg);
+      color: var(--tone-inverse);
+    }
   }
 
   /* Shared bar: index + project link (left), controls (right). Always dark type. */
@@ -453,7 +497,7 @@ const first = slides[0];
     color: var(--color-text-primary);
   }
 
-  @media (min-width: 48em) {
+  @media (min-width: 48em) and (min-height: 36em) {
     .hero__bar {
       position: relative;
       z-index: 2;
@@ -516,10 +560,12 @@ const first = slides[0];
     text-decoration: none;
   }
 
-  .hero__project:hover {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.25em;
+  @media (hover: hover) and (pointer: fine) {
+    .hero__project:hover {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.25em;
+    }
   }
 
   /* Very narrow screens: the title is shown right above, so the bar keeps only the index */
@@ -553,8 +599,10 @@ const first = slides[0];
     transition: background-color var(--duration-fast) var(--ease);
   }
 
-  .hero__button:hover {
-    background: var(--color-surface-primary);
+  @media (hover: hover) and (pointer: fine) {
+    .hero__button:hover {
+      background: var(--color-surface-primary);
+    }
   }
 
   .hero__button:focus-visible {

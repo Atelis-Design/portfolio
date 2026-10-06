@@ -9,6 +9,15 @@ export const getStaticPaths = localeStaticPaths;
 const locale = Astro.params.locale as Locale;
 ---
 
-<BaseLayout locale={locale} description={localize(HOME.meta.description, locale)} current="home" shell="viewport">
+<BaseLayout
+  locale={locale}
+  title={localize(HOME.meta.title, locale)}
+  description={localize(HOME.meta.description, locale)}
+  current="home"
+  shell="viewport"
+  ogImage={HOME.hero.slides[0].image.src}
+  ogImageAlt={`L’Inconnue — Atelis Design`}
+  websiteSchema
+>
   <HomeHero locale={locale} />
 </BaseLayout>

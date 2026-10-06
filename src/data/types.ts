@@ -14,16 +14,19 @@ export interface ImageAsset {
   src: ImageMetadata;
   /** Real descriptive alt text, when written. `null` → a neutral generated alt is used. */
   alt: Localized | null;
+  /**
+   * Focal point (CSS object-position) for the project viewer's 16:9 crop. Only for an
+   * image whose centred crop loses its subject; the full-screen gallery always shows the whole image.
+   */
+  position?: string;
 }
 
-export type ImageSize = 'bleed' | 'wide' | 'inset' | 'detail';
-export type Align = 'start' | 'end';
-
-/** Small vocabulary of editorial gallery treatments. */
-export type GalleryBlock =
-  | { type: 'image'; image: ImageAsset; size: ImageSize; align?: Align }
-  | { type: 'row'; images: ImageAsset[]; size: 'wide' | 'inset' }
-  | { type: 'text'; text: Localized };
+/**
+ * Portfolio category — what kind of space a project is; drives the Projects filter.
+ * Stable keys; localized labels live in ui.ts (projectsIndex.categories).
+ * Not the design style: that is `ProjectRecord.concept`.
+ */
+export type PortfolioCategory = 'residential' | 'hospitality' | 'commercial' | 'retail';
 
 export interface Credit {
   role: Localized;
@@ -34,17 +37,34 @@ export interface ProjectRecord {
   /** Internal, stable route key (URL segment). Not a client-editable field. */
   id: string;
   title: string;
+  /** Portfolio category (Projects filter). */
+  portfolioCategory: PortfolioCategory;
+  /** Design concept / style descriptor, shown as written in every locale. */
+  concept: string;
+  /** Position on the Projects index; also the order of project-to-project navigation. */
+  listingOrder: number;
+  /**
+   * Project facts and text for the detail page. `null` = not supplied yet: the
+   * field is simply not shown. Never fill these with guesses.
+   */
+  /** Finer project type (e.g. a villa), listed with the facts on the detail page. */
   projectType: Localized | null;
+  /** One concise sentence for the detail page's information panel; its own copy, not the Home slide text. */
+  heroIntro: Localized | null;
+  /** Full project description in every locale: meta description today, editorial sections later. Not shown on the page. */
+  description: Localized | null;
   location: Localized | null;
   year: number | null;
   /** Free text such as "240 m²". */
   area: string | null;
-  shortDescription: Localized;
-  projectStory: Localized<string[]>;
+  /** Scope of work, e.g. interior design. */
+  scope: Localized | null;
+  /** Opening image of the detail page: the project's Home slide image. */
   heroImage: ImageAsset;
   /** Image used on listings (home, projects index). Falls back to heroImage. */
   coverImage?: ImageAsset;
-  gallery: GalleryBlock[];
+  /** The project's further photographs, in viewing order (the detail gallery follows heroImage). */
+  gallery: ImageAsset[];
   credits: Credit[];
   featured: boolean;
   homepageOrder: number | null;

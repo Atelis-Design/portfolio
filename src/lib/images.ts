@@ -11,7 +11,7 @@ import { getImage } from 'astro:assets';
  */
 
 /** Responsive widths; Astro drops any above the source width and adds the source width. */
-export const IMAGE_WIDTHS = [480, 768, 1080, 1440, 1920, 2560];
+export const IMAGE_WIDTHS = [320, 480, 768, 1080, 1440, 1920, 2560];
 export const IMAGE_FORMAT = 'webp';
 export const IMAGE_QUALITY = 80;
 
@@ -32,4 +32,18 @@ export async function imageSize(src: ImageMetadata): Promise<{ width: number; he
   const width = Number(attributes.width);
   const height = Number(attributes.height);
   return { width, height, ratio: width / height, portrait: height > width };
+}
+
+/**
+ * Responsive sources for images swapped in by script (project viewer, full-screen
+ * gallery): the same derivative files <Photo> uses, so nothing is generated twice.
+ */
+export async function imageSources(src: ImageMetadata): Promise<{ src: string; srcset: string; width: number; height: number }> {
+  const result = await optimize(src);
+  return {
+    src: result.src,
+    srcset: result.srcSet.attribute,
+    width: Number(result.attributes.width),
+    height: Number(result.attributes.height),
+  };
 }

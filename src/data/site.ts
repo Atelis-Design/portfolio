@@ -12,8 +12,6 @@ export const SITE = {
   domain: SITE_URL,
   /** Browser UI colour; mirrors --color-surface-primary in tokens.css. */
   themeColor: '#e0d7cf',
-  /** Default social share image. Next-phase asset — none exists yet. */
-  ogImage: null as string | null,
   contact: {
     email: 'atelisdesign.studio@gmail.com' as string | null,
     phone: null as string | null,

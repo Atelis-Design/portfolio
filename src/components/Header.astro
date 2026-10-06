@@ -120,10 +120,16 @@ const items: RouteKey[] = ['projects', 'services', 'about', 'contact'];
       color var(--duration-fast) var(--ease);
   }
 
-  .site-header__nav a:hover,
   .site-header__nav a[aria-current='page'] {
     color: var(--color-text-primary);
     background-size: 100% 1px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .site-header__nav a:hover {
+      color: var(--color-text-primary);
+      background-size: 100% 1px;
+    }
   }
 
   @media (max-width: 23.99em) {
