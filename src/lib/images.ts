@@ -11,7 +11,7 @@ import { getImage } from 'astro:assets';
  */
 
 /** Responsive widths; Astro drops any above the source width and adds the source width. */
-export const IMAGE_WIDTHS = [480, 768, 1080, 1440, 1920, 2560];
+export const IMAGE_WIDTHS = [320, 480, 768, 1080, 1440, 1920, 2560];
 export const IMAGE_FORMAT = 'webp';
 export const IMAGE_QUALITY = 80;
 

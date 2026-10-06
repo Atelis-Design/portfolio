@@ -35,7 +35,9 @@ const t = useUi(locale).projectDetail;
 const total = images.length;
 const pad = (n: number) => String(n).padStart(2, '0');
 
-const sources = await Promise.all(images.map(async (image) => ({ ...(await imageSources(image.src)), alt: image.alt })));
+const sources = await Promise.all(
+  images.map(async (image) => ({ ...(await imageSources(image.src)), alt: image.alt, position: image.position })),
+);
 /** Stage: 8 of 12 columns from 64em, full width below. */
 const STAGE_SIZES = '(min-width: 110em) 1100px, (min-width: 64em) 62vw, 100vw';
 /** Largest thumbnail height (--thumb-height); thumbnail widths follow each image's ratio. */
@@ -143,6 +145,8 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
     width: number;
     height: number;
     alt: string;
+    /** Focal point of the stage's 16:9 crop, for the few images that need one. */
+    position?: string;
   }
 
   const fill = (template: string, n: number, total: number) =>
@@ -179,6 +183,7 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
 
     // Stage: two stacked layers; the next image decodes in the hidden one, then they cross-fade.
     let shown = first;
+    first.style.objectPosition = items[0].position ?? '';
     let spare = first.cloneNode(false) as HTMLImageElement;
     spare.classList.remove('is-shown');
     spare.removeAttribute('fetchpriority');
@@ -192,10 +197,12 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
     let index = 0;
     let stageRequest = 0;
     let lightboxRequest = 0;
+    let rootOverflow = '';
 
     const showOnStage = async (item: Item) => {
       const request = ++stageRequest;
       setSources(spare, item);
+      spare.style.objectPosition = item.position ?? '';
       await spare.decode().catch(() => undefined);
       if (request !== stageRequest) return;
       spare.classList.add('is-shown');
@@ -256,14 +263,15 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
 
     // Full-screen gallery. showModal() makes the rest of the page inert and moves focus inside.
     stage.addEventListener('click', () => {
-      document.documentElement.style.overflow = 'hidden';
       dialog.showModal();
+      rootOverflow = document.documentElement.style.overflow;
+      document.documentElement.style.overflow = 'hidden';
       void showInLightbox(items[index], index + 1);
     });
     viewer.querySelector('[data-lightbox-close]')?.addEventListener('click', () => dialog.close());
     // Escape (native `cancel`) and the close button both end here: unlock the page, return focus.
     dialog.addEventListener('close', () => {
-      document.documentElement.style.overflow = '';
+      document.documentElement.style.overflow = rootOverflow;
       stage.focus({ preventScroll: true });
     });
     // Tab cycles through the gallery's own controls (the page behind is inert).
@@ -525,7 +533,8 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
     position: fixed;
     inset: 0;
     width: 100%;
-    height: 100%;
+    height: 100vh;
+    height: 100dvh;
     max-width: none;
     max-height: none;
     margin: 0;
@@ -534,6 +543,7 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
     background: color-mix(in srgb, var(--color-text-primary) 88%, #000);
     border: 0;
     color: var(--color-surface-primary);
+    overscroll-behavior: contain;
   }
 
   .lightbox::backdrop {
@@ -552,7 +562,10 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
 
   .lightbox__stage {
     position: absolute;
-    inset: 3.75rem 0.75rem 5rem;
+    top: calc(3.75rem + env(safe-area-inset-top));
+    right: calc(0.75rem + env(safe-area-inset-right));
+    bottom: calc(5rem + env(safe-area-inset-bottom));
+    left: calc(0.75rem + env(safe-area-inset-left));
     display: grid;
     place-items: center;
     touch-action: pan-y pinch-zoom;
@@ -598,8 +611,8 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
   }
 
   .lightbox__close {
-    top: 0.5rem;
-    right: 0.5rem;
+    top: calc(0.5rem + env(safe-area-inset-top));
+    right: calc(0.5rem + env(safe-area-inset-right));
   }
 
   .lightbox__close svg {
@@ -609,7 +622,7 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
   /* Phones: arrows sit beside the counter, below the image */
   .lightbox__prev,
   .lightbox__next {
-    bottom: 1rem;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 
   .lightbox__prev {
@@ -623,7 +636,7 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
   .lightbox__count {
     position: absolute;
     left: 50%;
-    bottom: 1rem;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
     display: grid;
     place-items: center;
     height: 3rem;
@@ -638,12 +651,15 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
   /* Larger screens: arrows at the sides, vertically centred */
   @media (min-width: 48em) {
     .lightbox__stage {
-      inset: 4rem 5.5rem;
+      top: calc(4rem + env(safe-area-inset-top));
+      right: calc(5.5rem + env(safe-area-inset-right));
+      bottom: calc(4rem + env(safe-area-inset-bottom));
+      left: calc(5.5rem + env(safe-area-inset-left));
     }
 
     .lightbox__close {
-      top: 1rem;
-      right: 1rem;
+      top: calc(1rem + env(safe-area-inset-top));
+      right: calc(1rem + env(safe-area-inset-right));
     }
 
     .lightbox__prev,
@@ -654,15 +670,15 @@ const payload = JSON.stringify(sources).replace(/</g, '\\u003c');
     }
 
     .lightbox__prev {
-      left: 1rem;
+      left: calc(1rem + env(safe-area-inset-left));
     }
 
     .lightbox__next {
-      right: 1rem;
+      right: calc(1rem + env(safe-area-inset-right));
     }
 
     .lightbox__count {
-      bottom: 0.5rem;
+      bottom: calc(0.5rem + env(safe-area-inset-bottom));
     }
   }
 

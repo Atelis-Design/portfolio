@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://atelisdesign.com/sitemap.xml

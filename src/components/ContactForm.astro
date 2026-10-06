@@ -306,10 +306,12 @@ const messageError = format(t.invalid.message, { min: CONTACT_LIMITS.messageMin 
     opacity: 1;
   }
 
-  .field input:hover,
-  .field select:hover,
-  .field textarea:hover {
-    border-color: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
+  @media (hover: hover) and (pointer: fine) {
+    .field input:hover,
+    .field select:hover,
+    .field textarea:hover {
+      border-color: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
+    }
   }
 
   /* Focus: the frame darkens and doubles (an outline, so it survives forced-colours mode) */
@@ -393,10 +395,6 @@ const messageError = format(t.invalid.message, { min: CONTACT_LIMITS.messageMin 
     transition: background-color var(--duration-fast) var(--ease);
   }
 
-  .contact-form__submit:hover {
-    background: var(--color-text-secondary);
-  }
-
   .contact-form__arrow {
     flex: none;
     width: 1.2rem;
@@ -407,8 +405,14 @@ const messageError = format(t.invalid.message, { min: CONTACT_LIMITS.messageMin 
     transition: transform var(--duration-fast) var(--ease);
   }
 
-  .contact-form__submit:hover .contact-form__arrow {
-    transform: translateX(0.25rem);
+  @media (hover: hover) and (pointer: fine) {
+    .contact-form__submit:hover {
+      background: var(--color-text-secondary);
+    }
+
+    .contact-form__submit:hover .contact-form__arrow {
+      transform: translateX(0.25rem);
+    }
   }
 
   /* Sending: restrained — label changes, arrow steps aside */

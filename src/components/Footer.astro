@@ -118,7 +118,8 @@ const channels = (
     align-items: center;
     gap: var(--space-2xs) var(--footer-gap);
     min-height: var(--footer-height);
-    padding-block: var(--space-sm);
+    padding-top: var(--space-sm);
+    padding-bottom: max(var(--space-sm), env(safe-area-inset-bottom));
   }
 
   .site-footer__discipline {
@@ -150,9 +151,14 @@ const channels = (
     transition: color var(--duration-fast) var(--ease);
   }
 
-  .site-footer__social a:hover,
   .site-footer__social a:focus-visible {
     color: var(--color-text-primary);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .site-footer__social a:hover {
+      color: var(--color-text-primary);
+    }
   }
 
   .site-footer__social a:focus-visible {

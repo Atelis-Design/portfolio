@@ -14,6 +14,11 @@ export interface ImageAsset {
   src: ImageMetadata;
   /** Real descriptive alt text, when written. `null` → a neutral generated alt is used. */
   alt: Localized | null;
+  /**
+   * Focal point (CSS object-position) for the project viewer's 16:9 crop. Only for an
+   * image whose centred crop loses its subject; the full-screen gallery always shows the whole image.
+   */
+  position?: string;
 }
 
 /**
@@ -42,9 +47,11 @@ export interface ProjectRecord {
    * Project facts and text for the detail page. `null` = not supplied yet: the
    * field is simply not shown. Never fill these with guesses.
    */
-  /** Finer project type (e.g. a villa); the detail page shows the portfolio category when null. */
+  /** Finer project type (e.g. a villa), listed with the facts on the detail page. */
   projectType: Localized | null;
-  /** Project description in every locale. */
+  /** One concise sentence for the detail page's information panel; its own copy, not the Home slide text. */
+  heroIntro: Localized | null;
+  /** Full project description in every locale: meta description today, editorial sections later. Not shown on the page. */
   description: Localized | null;
   location: Localized | null;
   year: number | null;
@@ -52,7 +59,7 @@ export interface ProjectRecord {
   area: string | null;
   /** Scope of work, e.g. interior design. */
   scope: Localized | null;
-  /** Opening image of the detail page. */
+  /** Opening image of the detail page: the project's Home slide image. */
   heroImage: ImageAsset;
   /** Image used on listings (home, projects index). Falls back to heroImage. */
   coverImage?: ImageAsset;

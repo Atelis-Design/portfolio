@@ -5,9 +5,8 @@
  *
  * Project order, numbering and previous/next come from the canonical order
  * shared with the Projects index (getProject → listingOrder). Only facts that
- * exist are shown; nothing is invented while the client's copy is pending.
+ * exist are shown; nothing is invented.
  */
-import { getImage } from 'astro:assets';
 import ProjectViewer from '../../../components/ProjectViewer.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { getProject, getProjectIds } from '../../../data';
@@ -25,8 +24,6 @@ if (!project) throw new Error(`Unknown project: ${Astro.params.project}`);
 
 const ui = useUi(locale);
 const pad = (n: number) => String(n).padStart(2, '0');
-/** Share image: the opening photograph as a 1200px JPEG (widely supported by link previews). */
-const ogImage = await getImage({ src: project.images[0].src, width: 1200, format: 'jpg', quality: 80 });
 ---
 
 <BaseLayout
@@ -35,7 +32,8 @@ const ogImage = await getImage({ src: project.images[0].src, width: 1200, format
   description={project.seoDescription}
   current="projects"
   ogType="article"
-  ogImage={ogImage.src}
+  ogImage={project.socialImage.src}
+  ogImageAlt={project.socialImage.alt}
 >
   <article class="project">
     <p class="project__back container">
@@ -56,7 +54,7 @@ const ogImage = await getImage({ src: project.images[0].src, width: 1200, format
         <span class="info__rule" aria-hidden="true"></span>
         <p class="info__label">{project.categoryLabel}</p>
       </div>
-      {project.description && <p class="info__description">{project.description}</p>}
+      {project.intro && <p class="info__intro">{project.intro}</p>}
       {
         project.meta.length > 0 && (
           <dl class="info__meta">
@@ -167,7 +165,8 @@ const ogImage = await getImage({ src: project.images[0].src, width: 1200, format
     color: var(--color-text-secondary);
   }
 
-  .info__description {
+  /* One concise sentence (heroIntro) */
+  .info__intro {
     max-width: 32rem;
     margin-top: var(--space-lg);
     font-size: var(--text-md);
@@ -175,10 +174,15 @@ const ogImage = await getImage({ src: project.images[0].src, width: 1200, format
     color: var(--color-text-secondary);
   }
 
-  /* KONUM · YIL · ALAN · KAPSAM — rendered only for facts that exist */
+  /* PROJE TÜRÜ · KONUM · YIL · ALAN · KAPSAM — rendered only for facts that exist */
+  /*
+   * One label column for all rows: 38% of the panel, widened only when a label is
+   * longer than that (DE "Leistungsumfang" in a narrow panel), so values stay aligned.
+   */
   .info__meta {
     display: grid;
-    gap: 0.55rem;
+    grid-template-columns: minmax(max(6.5rem, 38%), max-content) 1fr;
+    gap: 0.55rem var(--space-md);
     margin-top: var(--space-lg);
     padding-top: var(--space-md);
     border-top: var(--rule);
@@ -186,8 +190,8 @@ const ogImage = await getImage({ src: project.images[0].src, width: 1200, format
 
   .info__row {
     display: grid;
-    grid-template-columns: minmax(6.5rem, 38%) 1fr;
-    gap: var(--space-md);
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
     align-items: baseline;
   }
 
@@ -201,6 +205,44 @@ const ogImage = await getImage({ src: project.images[0].src, width: 1200, format
   .info__row dd {
     font-size: var(--text-base);
     color: var(--color-text-primary);
+  }
+
+  /*
+   * Beside the stage (from 64em) the panel should end where the image ends, and the
+   * image gets shorter with the viewport while the type does not. Type sizes stay as
+   * they are; only spacing and leading give way: tightest up to a 90rem viewport,
+   * the full rhythm from 120rem. --info-room runs 0 → 30rem across that range.
+   */
+  @media (min-width: 64em) {
+    .project {
+      --info-room: clamp(0rem, 100vw - 90rem, 30rem);
+      /* 1.125rem → 2.75rem (--space-lg) */
+      --info-gap: calc(1.125rem + var(--info-room) * 0.0542);
+      /* 0.75rem → 1.25rem (--space-md) */
+      --info-gap-sm: calc(0.75rem + var(--info-room) / 60);
+    }
+
+    .info__title,
+    .info__category {
+      margin-top: var(--info-gap-sm);
+    }
+
+    .info__intro {
+      margin-top: var(--info-gap);
+      line-height: calc(1.8125rem + var(--info-room) / 240);
+    }
+
+    .info__meta {
+      row-gap: calc(0.375rem + var(--info-room) * 0.00583);
+      margin-top: var(--info-gap);
+      /* keeps the image counter clear of the last fact when the panel is full */
+      margin-bottom: var(--space-xs);
+      padding-top: var(--info-gap-sm);
+    }
+
+    .info__row dd {
+      line-height: calc(1.3125rem + var(--info-room) * 0.01125);
+    }
   }
 
   /* Previous · all · next: compact, one quiet band above the footer ------------- */

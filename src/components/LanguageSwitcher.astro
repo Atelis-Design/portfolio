@@ -32,7 +32,7 @@ const ui = useUi(locale);
             href={switchLocalePath(path, code)}
             lang={code}
             hreflang={code}
-            aria-current={code === locale ? 'true' : undefined}
+            aria-current={code === locale ? 'page' : undefined}
           >
             {LOCALE_NAMES[code]}
           </a>
@@ -74,6 +74,8 @@ const ui = useUi(locale);
     display: inline-flex;
     align-items: center;
     gap: 0.5em;
+    justify-content: center;
+    min-width: 2.75rem;
     min-height: 2.75rem;
     padding-inline: 0;
     font-family: var(--font-brand);
@@ -116,13 +118,15 @@ const ui = useUi(locale);
     color: var(--color-text-secondary);
   }
 
-  .lang__list a:hover {
-    color: var(--color-text-primary);
-    background: var(--color-surface-secondary);
-  }
-
-  .lang__list a[aria-current='true'] {
+  .lang__list a[aria-current='page'] {
     color: var(--color-text-primary);
     text-decoration: underline;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .lang__list a:hover {
+      color: var(--color-text-primary);
+      background: var(--color-surface-secondary);
+    }
   }
 </style>

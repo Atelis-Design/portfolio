@@ -72,7 +72,7 @@ const conceptLang = locale === 'en' ? undefined : 'en';
     <header class="projects-hero container">
       <p class="projects-hero__eyebrow">{ui.nav.projects}</p>
       <h1 class="projects-hero__title">
-        {localize(PROJECTS_PAGE.title, locale).map((line) => <span>{line}</span>)}
+        {localize(PROJECTS_PAGE.title, locale).map((line) => <><span>{line}</span>{' '}</>)}
       </h1>
       <div class="projects-hero__intro">
         <span class="projects-hero__rule" aria-hidden="true"></span>
@@ -320,6 +320,7 @@ const conceptLang = locale === 'en' ? undefined : 'en';
 
   /* Text navigation: no pills or fills; the active category carries a hairline underline */
   .projects-filter__button {
+    min-width: 2.75rem;
     min-height: 2.75rem;
     padding: 0;
     background: linear-gradient(currentColor, currentColor) no-repeat 0 calc(100% - 0.65rem) / 0 1px;
@@ -335,13 +336,15 @@ const conceptLang = locale === 'en' ? undefined : 'en';
       background-size var(--duration-fast) var(--ease);
   }
 
-  .projects-filter__button:hover {
-    color: var(--color-text-primary);
-  }
-
   .projects-filter__button[aria-pressed='true'] {
     color: var(--color-text-primary);
     background-size: calc(100% - 0.18em) 1px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .projects-filter__button:hover {
+      color: var(--color-text-primary);
+    }
   }
 
   @media (min-width: 48em) {

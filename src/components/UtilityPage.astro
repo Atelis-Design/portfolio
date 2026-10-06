@@ -73,14 +73,18 @@ const { labelledBy } = Astro.props;
 
   .utility__langs a {
     display: inline-flex;
+    min-width: 2.75rem;
     min-height: 2.75rem;
     align-items: center;
+    justify-content: center;
     text-decoration: none;
     color: var(--color-text-secondary);
   }
 
-  .utility__langs a:hover {
-    color: var(--color-text-primary);
-    text-decoration: underline;
+  @media (hover: hover) and (pointer: fine) {
+    .utility__langs a:hover {
+      color: var(--color-text-primary);
+      text-decoration: underline;
+    }
   }
 </style>

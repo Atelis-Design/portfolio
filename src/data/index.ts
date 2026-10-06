@@ -61,6 +61,8 @@ export function fallbackLang(value: Localized<unknown> | null | undefined, local
 export interface ViewImage {
   src: ImageMetadata;
   alt: string;
+  /** Focal point for the project viewer's 16:9 crop, when the image needs one. */
+  position?: string;
 }
 
 export interface ProjectMeta {
@@ -77,14 +79,18 @@ export interface ProjectSummary {
 }
 
 export interface ProjectView extends ProjectSummary {
-  /** The finer project type when supplied, else the localized portfolio category. */
+  /** The localized portfolio category. */
   categoryLabel: string;
-  /** Project text; null when there is none to show. */
+  /** One concise sentence for the information panel; null when there is none. */
+  intro: string | null;
+  /** Full project text: kept for the meta description and later editorial use, not rendered on the page. */
   description: string | null;
-  /** Facts that exist, in display order (location, year, area, scope). */
+  /** Facts that exist, in display order (project type, location, year, area, scope). */
   meta: ProjectMeta[];
   /** Every photograph once: the opening image, then the gallery in order. */
   images: ViewImage[];
+  /** Canonical Home hero used by social previews for this project. */
+  socialImage: ViewImage;
   credits: { role: string; name: string }[];
   seoTitle: string | null;
   seoDescription: string;
@@ -94,7 +100,10 @@ export interface ProjectView extends ProjectSummary {
   next: ProjectSummary;
 }
 
-/** Canonical project order (Projects index, project numbering, previous/next). Home uses homepageOrder. */
+/**
+ * Canonical project order (Projects index, project numbering, previous/next).
+ * The Home carousel renders HOME.hero.slides, listed in this same order; `homepageOrder` mirrors it.
+ */
 function sortedRecords(): ProjectRecord[] {
   return [...PROJECTS].sort((a, b) => a.listingOrder - b.listingOrder);
 }
@@ -103,6 +112,7 @@ function sortedRecords(): ProjectRecord[] {
 function projectMeta(record: ProjectRecord, locale: Locale): ProjectMeta[] {
   const ui = useUi(locale).project;
   const rows: [string, string | null][] = [
+    [ui.projectType, localize(record.projectType, locale)],
     [ui.location, localize(record.location, locale)],
     [ui.year, record.year ? String(record.year) : null],
     [ui.area, record.area],
@@ -121,13 +131,14 @@ function projectImages(record: ProjectRecord): ImageAsset[] {
 function createAltResolver(record: ProjectRecord, locale: Locale) {
   const images = projectImages(record).map((asset) => asset.src);
   const template = useUi(locale).project.imageAlt;
-  return (asset: ImageAsset): ViewImage => {
+  const alt = (asset: ImageAsset): string => {
     const written = localize(asset.alt, locale);
-    if (written) return { src: asset.src, alt: written };
-    const position = images.indexOf(asset.src);
-    if (position === -1) return { src: asset.src, alt: record.title };
-    return { src: asset.src, alt: format(template, { title: record.title, n: position + 1, total: images.length }) };
+    if (written) return written;
+    const index = images.indexOf(asset.src);
+    if (index === -1) return record.title;
+    return format(template, { title: record.title, n: index + 1, total: images.length });
   };
+  return (asset: ImageAsset): ViewImage => ({ src: asset.src, alt: alt(asset), position: asset.position });
 }
 
 function toSummary(record: ProjectRecord, locale: Locale): ProjectSummary {
@@ -141,13 +152,10 @@ function toSummary(record: ProjectRecord, locale: Locale): ProjectSummary {
   };
 }
 
-/**
- * Project text: the client's project description once supplied; until then the
- * client-approved Home carousel text for the same project. Never invented.
- */
-function projectDescription(record: ProjectRecord, locale: Locale): string | null {
-  const slide = HOME.hero.slides.find((item) => item.projectId === record.id);
-  return localize(record.description, locale) ?? localize(slide?.description, locale);
+/** Meta description length: the project text's opening sentence (the full text is too long for a snippet). */
+function firstSentence(text: string): string {
+  const end = text.search(/[.!?](\s|$)/);
+  return end === -1 ? text : text.slice(0, end + 1);
 }
 
 export function getProjectIds(): string[] {
@@ -177,16 +185,27 @@ export function getProject(id: string, locale: Locale): ProjectView | null {
   const record = records[index];
   const resolve = createAltResolver(record, locale);
   const total = records.length;
-  const description = projectDescription(record, locale);
+  const intro = localize(record.heroIntro, locale);
+  const description = localize(record.description, locale);
+  /** Meta description source: the project description, else the panel sentence. */
+  const summary = description ?? intro;
+  const socialAsset = HOME.hero.slides.find((slide) => slide.projectId === record.id)?.image ?? record.heroImage;
   return {
     ...toSummary(record, locale),
-    categoryLabel: localize(record.projectType, locale) ?? useUi(locale).projectsIndex.categories[record.portfolioCategory],
+    categoryLabel: useUi(locale).projectsIndex.categories[record.portfolioCategory],
+    intro,
     description,
     meta: projectMeta(record, locale),
     images: projectImages(record).map(resolve),
+    socialImage: {
+      src: socialAsset.src,
+      alt: localize(socialAsset.alt, locale) ?? `${record.title} — Atelis Design`,
+    },
     credits: record.credits.map((credit) => ({ role: localize(credit.role, locale), name: credit.name })),
     seoTitle: localize(record.seo?.title, locale),
-    seoDescription: localize(record.seo?.description, locale) ?? description ?? localize(HOME.meta.description, locale),
+    seoDescription:
+      localize(record.seo?.description, locale) ??
+      (summary ? firstSentence(summary) : localize(HOME.meta.description, locale)),
     index: index + 1,
     total,
     previous: toSummary(records[(index - 1 + total) % total], locale),

@@ -13,7 +13,7 @@
  */
 import { DEFAULT_LOCALE, isLocale } from '../../src/i18n/locales';
 import { localizedPath } from '../../src/i18n/routes';
-import { HONEYPOT_FIELD, validateContact } from '../../src/lib/contact';
+import { CONTACT_FIELDS, HONEYPOT_FIELD, validateContact } from '../../src/lib/contact';
 import {
   readEmailConfig,
   sendConfirmation,
@@ -30,6 +30,12 @@ interface PagesContext {
 
 const JSON_TYPE = 'application/json';
 const FORM_TYPE = 'application/x-www-form-urlencoded';
+const ALLOWED_FIELDS = new Set<string>([...CONTACT_FIELDS, 'locale', HONEYPOT_FIELD]);
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
 
 /** Room for a 5 000-character Cyrillic message, percent-encoded, plus the other fields. */
 const MAX_BODY_BYTES = 64 * 1024;
@@ -47,7 +53,7 @@ function json({ status, body }: Outcome, headers: Record<string, string> = {}): 
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
+      ...SECURITY_HEADERS,
       ...headers,
     },
   });
@@ -56,7 +62,14 @@ function json({ status, body }: Outcome, headers: Record<string, string> = {}): 
 /** No-JavaScript fallback: back to the contact page, where :target shows the result. */
 function redirectBack(locale: unknown, ok: boolean): Response {
   const target = localizedPath(isLocale(locale) ? locale : DEFAULT_LOCALE, 'contact', ok ? 'contact-sent' : 'contact-failed');
-  return new Response(null, { status: 303, headers: { Location: target, 'Cache-Control': 'no-store' } });
+  return new Response(null, {
+    status: 303,
+    headers: { Location: target, 'Cache-Control': 'no-store', ...SECURITY_HEADERS },
+  });
+}
+
+function hasExpectedShape(input: Record<string, unknown>): boolean {
+  return Object.entries(input).every(([key, value]) => ALLOWED_FIELDS.has(key) && typeof value === 'string');
 }
 
 async function readBody(request: Request, type: string): Promise<Record<string, unknown> | 'too_large' | null> {
@@ -73,6 +86,8 @@ async function readBody(request: Request, type: string): Promise<Record<string, 
 }
 
 async function handle(input: Record<string, unknown>, context: PagesContext): Promise<Outcome> {
+  if (!hasExpectedShape(input)) return fail(400, 'bad_request');
+
   // Bots only: the field cannot be seen, focused or reached by assistive technology.
   // Answer like a success so the bot learns nothing; nothing is sent.
   const trap = input[HONEYPOT_FIELD];

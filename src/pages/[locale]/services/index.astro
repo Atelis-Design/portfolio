@@ -1,8 +1,17 @@
 ---
-import InquiryForm from '../../../components/InquiryForm.astro';
+/**
+ * Services: editorial hero (copy beside a wide image), the five services as one
+ * image-led row, and the four-stage process under a hairline.
+ *
+ * From 80em the page is composed to fit one desktop viewport between the global
+ * header and footer: the hero takes whatever height is left over, down to a
+ * readable minimum, after which the document scrolls normally. Nothing is
+ * clipped and there is no inner scroll area. The services are not links: there
+ * are no service detail pages.
+ */
 import Photo from '../../../components/Photo.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import { SERVICES, getProjectSummary, localize, viewImage } from '../../../data';
+import { SERVICES, SITE, localize, viewImage } from '../../../data';
 import { localeStaticPaths, type Locale } from '../../../i18n/locales';
 import { useUi } from '../../../i18n/ui';
 
@@ -12,180 +21,458 @@ const locale = Astro.params.locale as Locale;
 const ui = useUi(locale);
 const pad = (n: number) => String(n).padStart(2, '0');
 
-const imageProject = getProjectSummary(SERVICES.image.projectId, locale);
-const image = viewImage(SERVICES.image.image, locale, imageProject?.title ?? '');
+const hero = viewImage(SERVICES.hero, locale, ui.nav.services);
+const services = SERVICES.items.map((item, i) => ({
+  number: pad(i + 1),
+  title: localize(item.title, locale),
+  text: localize(item.text, locale),
+  image: viewImage(item.image, locale, localize(item.title, locale)),
+}));
+const stages = SERVICES.process.stages.map((stage, i) => ({
+  number: pad(i + 1),
+  title: localize(stage.title, locale),
+  text: localize(stage.text, locale),
+}));
 ---
 
 <BaseLayout
   locale={locale}
-  title={ui.nav.services}
+  title={localize(SERVICES.meta.title, locale)}
   description={localize(SERVICES.meta.description, locale)}
   current="services"
+  ogImage={hero.src}
+  ogImageAlt={hero.alt}
 >
-  <header class="page-intro container grid">
-    <h1 class="page-intro__title">{ui.nav.services}</h1>
-    <p class="page-intro__lead statement">{localize(SERVICES.lead, locale)}</p>
-  </header>
+  <div class="services">
+    <header class="services-hero">
+      <div class="services-hero__text">
+        {/* Locale-independent uppercase: the brand must not follow Turkish İ/I casing. */}
+        <p class="services-hero__kicker">{SITE.brand.toUpperCase()}</p>
+        <h1 class="services-hero__title">{ui.nav.services}</h1>
+        <span class="services-hero__rule" aria-hidden="true"></span>
+        <p class="services-hero__lead">{localize(SERVICES.lead, locale)}</p>
+      </div>
+      <figure class="services-hero__media">
+        <Photo image={hero} sizes="(min-width: 64em) 64vw, 100vw" priority />
+      </figure>
+    </header>
 
-  <figure class="services-image container">
-    <Photo image={image} sizes="(min-width: 110em) 1700px, 100vw" priority />
-  </figure>
-
-  <section class="section container grid areas" aria-labelledby="areas-title">
-    <h2 class="areas__label eyebrow" id="areas-title">{ui.services.areas}</h2>
-    <ol class="areas__list" role="list">
+    <ol class="services-grid container" role="list">
       {
-        SERVICES.areas.map((area, i) => (
-          <li class="area">
-            <span class="area__index">{pad(i + 1)}</span>
-            <h3 class="area__title">{localize(area.title, locale)}</h3>
-            <p class="area__text">{localize(area.text, locale)}</p>
+        services.map((service, i) => (
+          <li class="service">
+            <p class="service__index" aria-hidden="true">
+              {service.number}
+              {/* The rule points on to the next service; the last one keeps the plain rule */}
+              <span class:list={['service__index-line', { 'service__index-line--next': i < services.length - 1 }]} />
+            </p>
+            <h2 class="service__title">{service.title}</h2>
+            <div class="service__frame">
+              <Photo
+                image={service.image}
+                sizes="(min-width: 80em) 18vw, (min-width: 64em) 30vw, (min-width: 40em) 46vw, 92vw"
+              />
+            </div>
+            <p class="service__text">{service.text}</p>
           </li>
         ))
       }
     </ol>
-  </section>
 
-  <section class="approach surface-secondary" aria-labelledby="approach-title">
-    <div class="section container grid">
-      <h2 class="approach__label eyebrow" id="approach-title">{ui.services.approach}</h2>
-      <ol class="approach__list" role="list">
-        {
-          SERVICES.approach.map((step, i) => (
-            <li class="step">
-              <span class="step__index">{pad(i + 1)}</span>
-              <h3 class="step__title">{localize(step.title, locale)}</h3>
-              <p class="step__text">{localize(step.text, locale)}</p>
-            </li>
-          ))
-        }
-      </ol>
-    </div>
-  </section>
-
-  <section class="inquiry-section section container grid" id="inquiry" aria-labelledby="inquiry-title">
-    <div class="inquiry-section__intro">
-      <h2 class="display" id="inquiry-title">{ui.services.inquiry}</h2>
-      <p class="prose">{localize(SERVICES.inquiryIntro, locale)}</p>
-    </div>
-    <div class="inquiry-section__form">
-      <InquiryForm locale={locale} />
-    </div>
-  </section>
+    <section class="services-process container" aria-labelledby="process-title">
+      <div class="process">
+        <div class="process__head">
+          <p class="process__kicker">{localize(SERVICES.process.kicker, locale)}</p>
+          <h2 class="process__title" id="process-title">{localize(SERVICES.process.heading, locale)}</h2>
+        </div>
+        <ol class="process__list" role="list">
+          {
+            stages.map((stage) => (
+              <li class="stage">
+                <p class="stage__index" aria-hidden="true">
+                  {stage.number}
+                  <span class="stage__index-line" />
+                </p>
+                <h3 class="stage__title">{stage.title}</h3>
+                <p class="stage__text">{stage.text}</p>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </section>
+  </div>
 </BaseLayout>
 
 <style>
-  .services-image :global(img) {
-    width: 100%;
-  }
-
-  /* Areas of practice */
-  .areas {
-    row-gap: var(--space-lg);
-  }
-
-  .area {
+  /*
+   * The page meets the global footer directly (the footer keeps its own rule and
+   * height): the footer's top gap is taken up here and replaced by this page's
+   * own bottom padding.
+   */
+  :global(main:has(> .services)) {
     display: grid;
-    grid-template-columns: 3rem 1fr;
-    gap: var(--space-xs) var(--grid-gap);
-    padding-block: var(--space-lg);
-    border-top: var(--rule);
+    margin-bottom: calc(-1 * var(--space-xl));
   }
 
-  .area:last-child {
-    border-bottom: var(--rule);
+  .services {
+    --services-gap: var(--space-lg);
+    min-width: 0;
+    padding-bottom: var(--space-lg);
+    font-family: var(--font-brand);
   }
 
-  .area__index,
-  .step__index {
+  /* Hero ------------------------------------------------------------------ */
+
+  .services-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-lg);
+    padding-top: var(--space-lg);
+    padding-inline: var(--gutter);
+  }
+
+  .services-hero__text {
+    display: grid;
+    justify-items: start;
+    align-content: center;
+  }
+
+  .services-hero__kicker {
     font-size: var(--text-xs);
-    color: var(--color-text-muted);
-    font-variant-numeric: tabular-nums;
-    padding-top: 0.5em;
-  }
-
-  .area__title {
-    font-size: var(--text-lg);
-  }
-
-  .area__text {
-    grid-column: 2;
-    max-width: 44ch;
+    line-height: 1.4;
+    letter-spacing: 0.24em;
     color: var(--color-text-secondary);
+  }
+
+  .services-hero__title {
+    margin-top: var(--space-xs);
+    font-size: clamp(2.5rem, 1.6rem + 2.6vw, 4.25rem);
+    line-height: 1;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .services-hero__rule {
+    width: clamp(2.5rem, 4vw, 3.75rem);
+    height: 1px;
+    margin-block: var(--space-md);
+    background: var(--color-text-secondary);
+  }
+
+  .services-hero__lead {
+    max-width: 34rem;
+    font-size: var(--text-md);
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+  }
+
+  /* The frame reserves the space (no layout shift); the image is cropped, never distorted */
+  .services-hero__media {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--color-placeholder);
+  }
+
+  .services-hero__media :global(img) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 45%;
+  }
+
+  @media (min-width: 40em) {
+    .services-hero__media {
+      aspect-ratio: 21 / 9;
+    }
+  }
+
+  /*
+   * Two columns: the copy sits on the page's left edge (the container's, once the
+   * page is wider than --max-width) and the image runs from the header rule to the
+   * right edge of the viewport.
+   */
+  @media (min-width: 64em) {
+    .services-hero {
+      grid-template-columns: minmax(0, 33fr) minmax(0, 67fr);
+      column-gap: var(--space-xl);
+      padding-top: 0;
+      padding-right: 0;
+      padding-left: max(var(--gutter), calc(50% - var(--max-width) / 2 + var(--gutter)));
+    }
+
+    .services-hero__text {
+      padding-block: var(--space-md);
+    }
+
+    .services-hero__media {
+      aspect-ratio: auto;
+      min-height: clamp(13rem, 26vw, 24rem);
+    }
+  }
+
+  /* Services ---------------------------------------------------------------- */
+
+  /*
+   * Each service spans four shared rows (number, title, image, copy), so numbers,
+   * titles, image frames and copy line up across the row whatever the title length.
+   */
+  .services-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: var(--grid-gap);
+    margin-top: var(--services-gap);
+  }
+
+  .service {
+    display: grid;
+    grid-row: span 4;
+    grid-template-rows: subgrid;
+    row-gap: var(--space-sm);
+    min-width: 0;
+    margin-bottom: var(--space-lg);
+  }
+
+  .service__index,
+  .stage__index {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-numeric);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums lining-nums;
+    color: var(--color-text-secondary);
+  }
+
+  .service__index-line,
+  .stage__index-line {
+    width: clamp(2.5rem, 4vw, 4.25rem);
+    height: 1px;
+    background: currentColor;
+    opacity: 0.5;
+  }
+
+  /*
+   * Sequence (01 → 02 → … → 05): the number rule ends in a small open arrowhead
+   * of the rule's own weight and colour. Decorative only.
+   */
+  .service__index-line--next {
+    position: relative;
+  }
+
+  .service__index-line--next::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 0.3125rem;
+    height: 0.3125rem;
+    border-top: 1px solid;
+    border-right: 1px solid;
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  .service__title,
+  .stage__title {
+    font-size: clamp(1rem, 0.72rem + 0.38vw, 1.1875rem);
+    line-height: 1.25;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-wrap: wrap;
+  }
+
+  .service__frame {
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    background: var(--color-placeholder);
+  }
+
+  .service__frame :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .service__text,
+  .stage__text {
+    font-size: clamp(1.0625rem, 0.84rem + 0.3vw, 1.1875rem);
+    line-height: 1.32;
+    color: var(--color-text-secondary);
+  }
+
+  /* Hover (pointer devices): a slow, slight zoom inside the frame. Nothing here is a link. */
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .service:hover .service__frame :global(img) {
+      transform: scale(1.02);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .service__frame :global(img) {
+      transition: none;
+    }
+  }
+
+  @media (min-width: 40em) {
+    .services-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (min-width: 64em) {
-    .areas__label {
-      grid-column: 1 / span 3;
-    }
-
-    .areas__list {
-      grid-column: 4 / span 9;
-    }
-
-    .area {
-      grid-template-columns: 3rem 1fr 1fr;
-    }
-
-    .area__text {
-      grid-column: 3;
-    }
-  }
-
-  /* Approach */
-  .approach .grid {
-    row-gap: var(--space-xl);
-  }
-
-  .approach__list {
-    display: grid;
-    gap: var(--space-xl) var(--grid-gap);
-  }
-
-  .step {
-    display: grid;
-    gap: var(--space-sm);
-    align-content: start;
-    padding-top: var(--space-md);
-    border-top: var(--rule);
-  }
-
-  .step__title {
-    font-size: var(--text-lg);
-  }
-
-  .step__text {
-    color: var(--color-text-secondary);
-  }
-
-  @media (min-width: 48em) {
-    .approach__list {
+    .services-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 
-  /* Inquiry */
-  .inquiry-section {
-    row-gap: var(--space-xl);
-    scroll-margin-top: var(--space-md);
+  /* Process ----------------------------------------------------------------- */
+
+  .process {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-lg) var(--grid-gap);
+    padding-top: var(--space-lg);
+    border-top: var(--rule);
   }
 
-  .inquiry-section__intro {
+  .process__kicker {
+    font-size: var(--text-xs);
+    line-height: 1.4;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .process__title {
+    margin-top: var(--space-2xs);
+    font-size: clamp(1.75rem, 1rem + 1.25vw, 2.5rem);
+    line-height: 1.02;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .process__list {
     display: grid;
-    gap: var(--space-md);
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-lg) var(--grid-gap);
+  }
+
+  .stage {
+    display: grid;
     align-content: start;
+    gap: var(--space-xs);
+    min-width: 0;
+  }
+
+  .stage__text {
+    color: var(--color-text-muted);
+  }
+
+  @media (min-width: 40em) {
+    .process__list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (min-width: 64em) {
-    .inquiry-section__intro {
-      grid-column: 1 / span 4;
-      position: sticky;
-      top: var(--space-lg);
-      align-self: start;
+    .process__list {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  /* One desktop viewport ---------------------------------------------------- */
+
+  /*
+   * Five columns; the process shares them (heading in the first, stages in the
+   * other four). Spacing and the image height follow the viewport height so the
+   * page closes on the footer; the hero grows into whatever height remains.
+   */
+  @media (min-width: 80em) {
+    .services {
+      --services-gap: clamp(0.75rem, 1.8vh, 1.75rem);
+      display: flex;
+      flex-direction: column;
+      padding-bottom: var(--services-gap);
     }
 
-    .inquiry-section__form {
-      grid-column: 6 / span 7;
+    .services-hero {
+      flex: 1 0 auto;
+      max-height: 30rem;
+    }
+
+    .services-hero__text {
+      padding-block: var(--space-xs);
+    }
+
+    .services-hero__title {
+      margin-top: var(--space-2xs);
+      font-size: clamp(2.75rem, 1.3rem + 2.3vw, 3.75rem);
+    }
+
+    .services-hero__rule {
+      margin-block: clamp(0.625rem, 1.6vh, 1.25rem);
+    }
+
+    .services-hero__lead {
+      font-size: clamp(1.0625rem, 0.76rem + 0.36vw, 1.25rem);
+      line-height: 1.36;
+    }
+
+    .services-hero__media {
+      min-height: clamp(12rem, 24vh, 24rem);
+    }
+
+    .services-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .service {
+      row-gap: clamp(0.375rem, 1vh, 0.75rem);
+      margin-bottom: 0;
+    }
+
+    .service__title,
+    .stage__title {
+      font-size: clamp(0.9375rem, 0.6rem + 0.4vw, 1.125rem);
+    }
+
+    .service__text,
+    .stage__text {
+      font-size: clamp(0.9375rem, 0.62rem + 0.42vw, 1.125rem);
+    }
+
+    .service__frame {
+      aspect-ratio: auto;
+      height: clamp(7.5rem, 16vh, 13.5rem);
+    }
+
+    .services-process {
+      margin-top: var(--services-gap);
+    }
+
+    .process {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      padding-top: var(--services-gap);
+    }
+
+    /* Sized to the column, so the longest single word (RU) stays on one line */
+    .process__title {
+      font-size: clamp(1.5rem, 0.55rem + 1.3vw, 2.25rem);
+    }
+
+    .process__list {
+      grid-column: 2 / -1;
+      grid-template-columns: subgrid;
+    }
+
+    .stage {
+      gap: clamp(0.25rem, 0.7vh, 0.5rem);
     }
   }
 </style>
