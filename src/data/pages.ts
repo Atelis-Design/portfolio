@@ -187,14 +187,15 @@ export const PROJECTS_PAGE = {
   } satisfies Record<Locale, [string, string]>,
   lead: PROJECTS_LEAD,
   /**
-   * "Coming soon" previews at 1-based positions in the unfiltered grid.
-   * Layout only: not projects — no number, title, route or link, never counted.
-   * Revisit when a project is added.
+   * Client-supplied "Coming soon" preview images, used in this order (and
+   * repeated if needed) wherever the grid needs a Coming soon frame. Placement
+   * and count follow the published projects: see src/lib/projectsGrid.ts.
+   * Layout only: not projects — no number, title, route or link.
    */
-  comingSoon: [
-    { position: 3, image: { src: comingSoon01, alt: null } },
-    { position: 6, image: { src: comingSoon02, alt: null } },
-  ] satisfies { position: number; image: ImageAsset }[],
+  comingSoonImages: [
+    { src: comingSoon01, alt: null },
+    { src: comingSoon02, alt: null },
+  ] satisfies ImageAsset[],
 };
 
 /** Complete in every locale (no fallback). */

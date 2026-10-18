@@ -31,6 +31,7 @@ npm run dev        # local dev server at http://localhost:4321
 npm run build      # static build → dist/
 npm run preview    # serve the built site locally
 npm run check      # Astro + TypeScript diagnostics
+npm test           # unit tests (Node built-in runner, no extra dependencies)
 ```
 
 `npm run dev` serves the site UI only. The contact endpoint is a Cloudflare Pages

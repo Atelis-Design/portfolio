@@ -1,12 +1,13 @@
 ---
 /**
- * Projects index: editorial hero, category filter, and a gallery grid of the
- * published projects with quiet "Coming soon" frames at editorial positions.
+ * Projects index: editorial hero, category filter, and one continuous gallery grid
+ * of every published project, followed by quiet "Coming soon" frames (composition
+ * rules in src/lib/projectsGrid.ts).
  *
  * Desktop and tablet reuse Home's viewport shell: header and footer stay in view
  * and only this page's content scrolls (see the `main` rule below). Phones keep
  * normal document scrolling. The filter is a few lines of vanilla JS; without
- * JavaScript every project is shown.
+ * JavaScript the "All" grid is shown.
  */
 import Photo from '../../../components/Photo.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
@@ -14,6 +15,7 @@ import { HOME, PORTFOLIO_CATEGORIES, PROJECTS_PAGE, getProjects, localize, viewI
 import { localeStaticPaths, type Locale } from '../../../i18n/locales';
 import { projectPath } from '../../../i18n/routes';
 import { useUi } from '../../../i18n/ui';
+import { allGrid, emptyCategoryPreviews, visibleCardCount } from '../../../lib/projectsGrid';
 
 export const getStaticPaths = localeStaticPaths;
 
@@ -29,7 +31,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
  */
 const slideImages = new Map(HOME.hero.slides.map((slide) => [slide.projectId, slide.image]));
 
-/** Published projects in listing order; the counter and card numbers come from here. */
+/** Published projects in listing order; card numbers come from here. */
 const projects = getProjects(locale).map((project, i) => {
   const slideImage = slideImages.get(project.id);
   return {
@@ -39,22 +41,16 @@ const projects = getProjects(locale).map((project, i) => {
     image: slideImage ? viewImage(slideImage, locale, project.title) : project.cover,
   };
 });
-const total = pad(projects.length);
-
-/** Unfiltered grid: projects in order, with Coming soon previews at their editorial positions. */
-type ComingSoon = (typeof PROJECTS_PAGE.comingSoon)[number];
-type Slot = { kind: 'project'; project: (typeof projects)[number] } | { kind: 'soon'; soon: ComingSoon };
-const slots: Slot[] = [];
-const queue = [...projects];
-const lastSoon = Math.max(0, ...PROJECTS_PAGE.comingSoon.map((soon) => soon.position));
-for (let position = 1; queue.length > 0 || position <= lastSoon; position++) {
-  const soon = PROJECTS_PAGE.comingSoon.find((item) => item.position === position);
-  if (soon) slots.push({ kind: 'soon', soon });
-  else {
-    const project = queue.shift();
-    if (project) slots.push({ kind: 'project', project });
-  }
-}
+/** "All": every project, then the trailing Coming soon frames. */
+const slots = allGrid(projects, PROJECTS_PAGE.comingSoonImages);
+/** Categories without a published project show one Coming soon frame (hidden until chosen). */
+const categoryPreviews = emptyCategoryPreviews(
+  PORTFOLIO_CATEGORIES,
+  projects.map((project) => project.category),
+  PROJECTS_PAGE.comingSoonImages,
+);
+/** 01 — NN counts the visible cards of the active filter; "All" without JavaScript. */
+const total = pad(visibleCardCount('all', projects.map((project) => project.category)));
 
 const filters = ['all', ...PORTFOLIO_CATEGORIES] as const;
 /** Concept descriptors are written in English; mark them so capitals and speech follow English rules. */
@@ -81,7 +77,7 @@ const conceptLang = locale === 'en' ? undefined : 'en';
       <p class="projects-hero__count" aria-hidden="true">
         <span>01</span>
         <span class="projects-hero__count-line"></span>
-        <span>{total}</span>
+        <span data-count>{total}</span>
       </p>
     </header>
 
@@ -123,21 +119,26 @@ const conceptLang = locale === 'en' ? undefined : 'en';
               </div>
             </li>
           ) : (
-            <li class="card card--soon" data-card="soon">
+            <li class="card card--soon" data-card="soon" data-scope="all">
               <div class="card__frame">
-                <Photo
-                  image={{ src: slot.soon.image.src, alt: '' }}
-                  sizes="(min-width: 64em) 31vw, (min-width: 40em) 47vw, 92vw"
-                />
+                <Photo image={{ src: slot.image.src, alt: '' }} sizes="(min-width: 64em) 31vw, (min-width: 40em) 47vw, 92vw" />
                 <p class="card__soon">{t.comingSoon}</p>
               </div>
             </li>
           ),
         )
       }
+      {
+        categoryPreviews.map((preview) => (
+          <li class="card card--soon" data-card="soon" data-scope={preview.category} hidden>
+            <div class="card__frame">
+              <Photo image={{ src: preview.image.src, alt: '' }} sizes="(min-width: 64em) 31vw, (min-width: 40em) 47vw, 92vw" />
+              <p class="card__soon">{t.comingSoon}</p>
+            </div>
+          </li>
+        ))
+      }
     </ul>
-
-    <p class="projects-empty container" role="status" data-empty data-message={t.empty}></p>
   </div>
 </BaseLayout>
 
@@ -147,19 +148,22 @@ const conceptLang = locale === 'en' ? undefined : 'en';
     if (!root) return;
     const buttons = [...filter.querySelectorAll<HTMLButtonElement>('button[data-category]')];
     const cards = [...root.querySelectorAll<HTMLElement>('[data-card]')];
-    const empty = root.querySelector<HTMLElement>('[data-empty]');
+    const count = root.querySelector<HTMLElement>('[data-count]');
 
-    // "all" shows every project and the Coming soon frames; a category shows only its projects.
+    // "all": every project and the "all" Coming soon frames. A category: its projects,
+    // or its single Coming soon frame when it has none. The counter shows what is visible.
     const apply = (category: string) => {
       let shown = 0;
       for (const card of cards) {
-        const isProject = card.dataset.card === 'project';
-        const visible = category === 'all' || (isProject && card.dataset.category === category);
+        const visible =
+          card.dataset.card === 'project'
+            ? category === 'all' || card.dataset.category === category
+            : card.dataset.scope === category;
         card.hidden = !visible;
-        if (visible && isProject) shown += 1;
+        if (visible) shown += 1;
       }
       buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.category === category)));
-      if (empty) empty.textContent = shown === 0 ? (empty.dataset.message ?? '') : '';
+      if (count) count.textContent = String(shown).padStart(2, '0');
     };
 
     buttons.forEach((button) => button.addEventListener('click', () => apply(button.dataset.category ?? 'all')));
@@ -362,25 +366,16 @@ const conceptLang = locale === 'en' ? undefined : 'en';
     margin-top: var(--space-sm);
   }
 
-  /* One or two columns: projects first, the Coming soon frames after them */
-  .card--soon {
-    order: 1;
-  }
-
   @media (min-width: 40em) {
     .projects-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  /* Three columns: Coming soon frames return to their editorial positions */
+  /* DOM order is the reading order at every width: projects, then Coming soon frames */
   @media (min-width: 64em) {
     .projects-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .card--soon {
-      order: 0;
     }
   }
 
@@ -535,16 +530,5 @@ const conceptLang = locale === 'en' ? undefined : 'en';
     .card__frame :global(img) {
       transition: none;
     }
-  }
-
-  /* Empty category: a small editorial note */
-  .projects-empty {
-    font-size: var(--text-md);
-    line-height: 1.45;
-    color: var(--color-text-secondary);
-  }
-
-  .projects-empty:not(:empty) {
-    padding-block: var(--space-lg) var(--space-xl);
   }
 </style>
