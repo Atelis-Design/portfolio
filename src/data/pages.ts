@@ -1,6 +1,5 @@
 import type { Locale } from '../i18n/locales';
 import type { ImageAsset, Localized } from './types';
-import { TEMP } from './placeholder';
 
 // Dedicated Home hero assets. File numbers are not the slide order: that is HOME.hero.slides below.
 import heroSlide1 from '../assets/home/hero(1).jpeg';
@@ -17,8 +16,11 @@ import serviceInterior from '../assets/services/interior-architecture.png';
 import serviceTechnical from '../assets/services/technical-drawing.png';
 import serviceMaterials from '../assets/services/materials-furniture.png';
 import serviceStyling from '../assets/services/consulting-styling.png';
+// Client-supplied About imagery: the studio interior and the founder's portrait.
+import aboutInterior from '../assets/about/studio-interior.webp';
+import founderPortrait from '../assets/about/batur-berrak.webp';
 
-/** Page-level copy. Non-Home pages remain TEMP until their content phase. */
+/** Page-level copy. */
 
 interface PageMeta {
   title?: Localized;
@@ -185,38 +187,182 @@ export const PROJECTS_PAGE = {
   } satisfies Record<Locale, [string, string]>,
   lead: PROJECTS_LEAD,
   /**
-   * "Coming soon" previews at 1-based positions in the unfiltered grid.
-   * Layout only: not projects — no number, title, route or link, never counted.
-   * Revisit when a project is added.
+   * Client-supplied "Coming soon" preview images, used in this order (and
+   * repeated if needed) wherever the grid needs a Coming soon frame. Placement
+   * and count follow the published projects: see src/lib/projectsGrid.ts.
+   * Layout only: not projects — no number, title, route or link.
    */
-  comingSoon: [
-    { position: 3, image: { src: comingSoon01, alt: null } },
-    { position: 6, image: { src: comingSoon02, alt: null } },
-  ] satisfies { position: number; image: ImageAsset }[],
+  comingSoonImages: [
+    { src: comingSoon01, alt: null },
+    { src: comingSoon02, alt: null },
+  ] satisfies ImageAsset[],
 };
 
+/** Complete in every locale (no fallback). */
+type Complete<T = string> = Record<Locale, T>;
+
+interface AboutValue {
+  title: Complete;
+  text: Complete;
+}
+
+/**
+ * About copy, complete in every locale (no fallback). The Turkish copy is
+ * client-approved; the other locales are faithful translations of it. The
+ * heading is the brand name; value titles are stored in natural case and set
+ * in capitals with CSS (lang-aware, so Turkish i → İ).
+ */
 export const ABOUT = {
   meta: {
     description: {
-      tr: 'Atelis Design ve iç mimarlık portfolyosunun arkasındaki stüdyo hakkında.',
-      de: 'Über Atelis Design und das Studio hinter dem Innenarchitektur-Portfolio.',
-      en: 'About Atelis Design and the studio behind its interior architecture portfolio.',
-      fr: 'À propos d’Atelis Design et du studio à l’origine de son portfolio d’architecture intérieure.',
-      es: 'Acerca de Atelis Design y del estudio detrás de su portfolio de arquitectura de interiores.',
-      it: 'Atelis Design e lo studio dietro il suo portfolio di architettura d’interni.',
-      ru: 'Об Atelis Design и студии, создавшей портфолио интерьерной архитектуры.',
-    },
+      tr: 'Atelis Design, iç mimarlık ve tasarım alanında bağımsız bir stüdyodur. İnsanları, mekânları ve hikâyeleri bir araya getiren zamansız alanlar tasarlıyoruz.',
+      de: 'Atelis Design ist ein unabhängiges Studio für Innenarchitektur und Design. Wir gestalten zeitlose Räume, die Menschen, Orte und Geschichten zusammenbringen.',
+      en: 'Atelis Design is an independent interior architecture and design studio. We design timeless spaces that bring people, places and stories together.',
+      fr: 'Atelis Design est un studio indépendant d’architecture intérieure et de design. Nous concevons des espaces intemporels qui réunissent les personnes, les lieux et les histoires.',
+      es: 'Atelis Design es un estudio independiente de interiorismo y diseño. Diseñamos espacios atemporales que reúnen a personas, lugares e historias.',
+      it: 'Atelis Design è uno studio indipendente di architettura d’interni e design. Progettiamo spazi senza tempo che uniscono persone, luoghi e storie.',
+      ru: 'Atelis Design — независимая студия архитектуры интерьера и дизайна. Мы создаём вневременные пространства, объединяющие людей, места и истории.',
+    } satisfies Complete,
   } satisfies PageMeta,
-  /** Real portrait arrives separately; `null` renders the reserved frame. */
-  portrait: null as ImageAsset | null,
-  name: 'Batur Berrak',
-  lead: { en: TEMP.statement } as Localized,
-  profile: { en: [TEMP.paragraph, TEMP.paragraphAlt] } as Localized<string[]>,
-  studio: { en: [TEMP.paragraphThird] } as Localized<string[]>,
+  /** Small label above the heading. */
+  kicker: {
+    tr: 'Hakkımızda',
+    de: 'Über uns',
+    en: 'About us',
+    fr: 'À propos',
+    es: 'Sobre nosotros',
+    it: 'Chi siamo',
+    ru: 'О нас',
+  } satisfies Complete,
+  image: {
+    src: aboutInterior,
+    alt: {
+      tr: 'Kıvrımlı krem koltuk, mermer orta sehpa ve yüksek kemerli pencerelerle akşam ışığı alan bir salon',
+      de: 'Wohnraum im Abendlicht mit geschwungenem cremefarbenem Sofa, Marmor-Couchtisch und hohen Bogenfenstern',
+      en: 'Living room in evening light with a curved cream sofa, a marble coffee table and tall arched windows',
+      fr: 'Séjour dans la lumière du soir avec canapé courbe crème, table basse en marbre et hautes fenêtres cintrées',
+      es: 'Salón con luz de atardecer, sofá curvo color crema, mesa de centro de mármol y altos ventanales en arco',
+      it: 'Soggiorno nella luce della sera con divano curvo color crema, tavolino in marmo e alte finestre ad arco',
+      ru: 'Гостиная в вечернем свете с изогнутым кремовым диваном, мраморным столиком и высокими арочными окнами',
+    },
+  } satisfies ImageAsset,
+  paragraphs: {
+    tr: [
+      'Atelis Design, iç mimarlık ve tasarım alanında bağımsız bir stüdyodur. İnsanları, mekânları ve hikâyeleri bir araya getiren zamansız alanlar tasarlıyoruz.',
+      'Her mekân kendi kimliğini taşır. Bizim yaklaşımımız, bu potansiyeli keşfetmek ve onu çağdaş, net ve davetkâr bir tasarım diline dönüştürmektir.',
+      'İyi tasarlanmış mekânların yaşamı etkilediğine inanıyoruz. Çalışmalarımız; estetik ile işlevi, duygu ile hassasiyeti bir araya getirerek kalıcı değere sahip alanlar oluşturur.',
+      'İlk fikirden en küçük detaya kadar her projeye bütüncül bir anlayışla yaklaşıyoruz — mimari düşünce, nitelikli malzemeler ve ışık, oran ve atmosfer duygusuyla.',
+    ],
+    de: [
+      'Atelis Design ist ein unabhängiges Studio für Innenarchitektur und Design. Wir gestalten zeitlose Räume, die Menschen, Orte und Geschichten zusammenbringen.',
+      'Jeder Raum trägt seine eigene Identität. Unser Ansatz ist es, dieses Potenzial zu entdecken und in eine zeitgenössische, klare und einladende Gestaltungssprache zu übersetzen.',
+      'Wir glauben, dass gut gestaltete Räume das Leben prägen. Unsere Arbeiten verbinden Ästhetik und Funktion, Emotion und Präzision – und schaffen so Räume von bleibendem Wert.',
+      'Von der ersten Idee bis zum kleinsten Detail begegnen wir jedem Projekt ganzheitlich – mit architektonischem Denken, hochwertigen Materialien und einem Gespür für Licht, Proportion und Atmosphäre.',
+    ],
+    en: [
+      'Atelis Design is an independent interior architecture and design studio. We design timeless spaces that bring people, places and stories together.',
+      'Every space carries its own identity. Our approach is to discover that potential and translate it into a contemporary, clear and inviting design language.',
+      'We believe that well-designed spaces shape the way we live. Our work brings together aesthetics and function, emotion and precision, to create spaces of lasting value.',
+      'From the first idea to the smallest detail, we approach every project holistically — with architectural thinking, quality materials and a sense of light, proportion and atmosphere.',
+    ],
+    fr: [
+      'Atelis Design est un studio indépendant d’architecture intérieure et de design. Nous concevons des espaces intemporels qui réunissent les personnes, les lieux et les histoires.',
+      'Chaque lieu porte sa propre identité. Notre démarche consiste à révéler ce potentiel et à le traduire en un langage esthétique contemporain, épuré et accueillant.',
+      'Nous sommes convaincus que des espaces bien conçus influencent notre manière de vivre. Nos réalisations allient esthétique et fonction, émotion et précision, pour créer des lieux d’une valeur durable.',
+      'De la première idée au moindre détail, nous abordons chaque projet dans sa globalité — avec une pensée architecturale, des matériaux de qualité et un sens de la lumière, des proportions et de l’atmosphère.',
+    ],
+    es: [
+      'Atelis Design es un estudio independiente de interiorismo y diseño. Diseñamos espacios atemporales que reúnen a personas, lugares e historias.',
+      'Cada espacio tiene su propia identidad. Nuestro enfoque consiste en descubrir ese potencial y traducirlo a un lenguaje de diseño contemporáneo, claro y acogedor.',
+      'Creemos que los espacios bien diseñados influyen en la vida. Nuestro trabajo une estética y función, emoción y precisión, para crear espacios de valor duradero.',
+      'Desde la primera idea hasta el último detalle, abordamos cada proyecto de forma integral: con pensamiento arquitectónico, materiales de calidad y sensibilidad por la luz, la proporción y la atmósfera.',
+    ],
+    it: [
+      'Atelis Design è uno studio indipendente di architettura d’interni e design. Progettiamo spazi senza tempo che uniscono persone, luoghi e storie.',
+      'Ogni spazio ha una propria identità. Il nostro approccio consiste nello scoprirne il potenziale e tradurlo in un linguaggio progettuale contemporaneo, chiaro e accogliente.',
+      'Crediamo che gli spazi ben progettati influenzino la vita. Il nostro lavoro unisce estetica e funzione, emozione e precisione, per creare spazi dal valore duraturo.',
+      'Dalla prima idea al più piccolo dettaglio, affrontiamo ogni progetto con una visione d’insieme: con pensiero architettonico, materiali di qualità e sensibilità per la luce, le proporzioni e l’atmosfera.',
+    ],
+    ru: [
+      'Atelis Design — независимая студия архитектуры интерьера и дизайна. Мы создаём вневременные пространства, объединяющие людей, места и истории.',
+      'Каждое пространство обладает собственным характером. Наш подход — раскрыть этот потенциал и перевести его на современный, ясный и располагающий язык дизайна.',
+      'Мы верим, что продуманные пространства влияют на жизнь. Наши работы объединяют эстетику и функцию, чувство и точность, создавая пространства непреходящей ценности.',
+      'От первой идеи до мельчайшей детали мы подходим к каждому проекту целостно — с архитектурным мышлением, качественными материалами и чувством света, пропорций и атмосферы.',
+    ],
+  } satisfies Complete<string[]>,
+  founder: {
+    name: 'Batur Berrak',
+    role: {
+      tr: 'Kurucu',
+      de: 'Gründer',
+      en: 'Founder',
+      fr: 'Fondateur',
+      es: 'Fundador',
+      it: 'Fondatore',
+      ru: 'Основатель',
+    } satisfies Complete,
+    portrait: {
+      src: founderPortrait,
+      alt: {
+        tr: 'Batur Berrak’ın siyah-beyaz portresi',
+        de: 'Schwarz-Weiß-Porträt von Batur Berrak',
+        en: 'Black-and-white portrait of Batur Berrak',
+        fr: 'Portrait en noir et blanc de Batur Berrak',
+        es: 'Retrato en blanco y negro de Batur Berrak',
+        it: 'Ritratto in bianco e nero di Batur Berrak',
+        ru: 'Чёрно-белый портрет Батура Беррака',
+      },
+    } satisfies ImageAsset,
+    bio: {
+      tr: 'Batur Berrak, Atelis Design’ın kurucusudur. Mekânlara, insanlara ve detaylara duyduğu hassasiyetle; estetik, işlev ve bireyselliği bir araya getiren çağdaş iç mekânlar tasarlar.',
+      de: 'Batur Berrak ist der Gründer von Atelis Design. Mit einem feinen Gespür für Räume, Menschen und Details gestaltet er zeitgenössische Interieurs, die Ästhetik, Funktion und Individualität vereinen.',
+      en: 'Batur Berrak is the founder of Atelis Design. With a sensitivity to spaces, people and details, he designs contemporary interiors that bring together aesthetics, function and individuality.',
+      fr: 'Batur Berrak est le fondateur d’Atelis Design. Avec une sensibilité particulière pour les lieux, les personnes et les détails, il conçoit des intérieurs contemporains qui allient esthétique, fonction et individualité.',
+      es: 'Batur Berrak es el fundador de Atelis Design. Con una especial sensibilidad hacia los espacios, las personas y los detalles, diseña interiores contemporáneos que unen estética, función e individualidad.',
+      it: 'Batur Berrak è il fondatore di Atelis Design. Con una particolare sensibilità per gli spazi, le persone e i dettagli, progetta interni contemporanei che uniscono estetica, funzione e individualità.',
+      ru: 'Батур Беррак — основатель Atelis Design. С тонким вниманием к пространствам, людям и деталям он создаёт современные интерьеры, объединяющие эстетику, функциональность и индивидуальность.',
+    } satisfies Complete,
+  },
+  /** Exactly three studio values, in the approved order. */
+  values: [
+    {
+      title: { tr: 'Bireysellik', de: 'Individualität', en: 'Individuality', fr: 'Individualité', es: 'Individualidad', it: 'Individualità', ru: 'Индивидуальность' },
+      text: {
+        tr: 'Her mekân benzersizdir — tıpkı onu kullanan insanlar gibi.',
+        de: 'Jeder Raum ist einzigartig – genau wie die Menschen, die ihn nutzen.',
+        en: 'Every space is unique — just like the people who use it.',
+        fr: 'Chaque espace est unique — tout comme les personnes qui l’occupent.',
+        es: 'Cada espacio es único, igual que las personas que lo utilizan.',
+        it: 'Ogni spazio è unico, proprio come le persone che lo vivono.',
+        ru: 'Каждое пространство уникально — как и люди, которые им пользуются.',
+      },
+    },
+    {
+      title: { tr: 'Kalite', de: 'Qualität', en: 'Quality', fr: 'Qualité', es: 'Calidad', it: 'Qualità', ru: 'Качество' },
+      text: {
+        tr: 'Malzeme, işçilik ve detay seçiminde en yüksek özeni benimsiyoruz.',
+        de: 'Bei der Wahl von Materialien, Verarbeitung und Details legen wir höchste Sorgfalt an.',
+        en: 'We take the utmost care in our choice of materials, craftsmanship and detail.',
+        fr: 'Nous apportons le plus grand soin au choix des matériaux, de la mise en œuvre et des détails.',
+        es: 'Ponemos el máximo cuidado en la elección de materiales, la ejecución y los detalles.',
+        it: 'Dedichiamo la massima cura alla scelta di materiali, lavorazioni e dettagli.',
+        ru: 'Мы проявляем высочайшую тщательность в выборе материалов, исполнения и деталей.',
+      },
+    },
+    {
+      title: { tr: 'Zamansızlık', de: 'Zeitlosigkeit', en: 'Timelessness', fr: 'Intemporalité', es: 'Atemporalidad', it: 'Atemporalità', ru: 'Вневременность' },
+      text: {
+        tr: 'Tasarım anlayışımız, modaya değil kalıcı değere odaklanır.',
+        de: 'Unser Gestaltungsverständnis richtet sich nicht nach Moden, sondern nach bleibendem Wert.',
+        en: 'Our approach to design focuses on lasting value, not on fashion.',
+        fr: 'Notre conception du design vise une valeur durable, non la mode.',
+        es: 'Nuestra forma de entender el diseño se centra en el valor duradero, no en las modas.',
+        it: 'La nostra idea di progetto punta al valore duraturo, non alle mode.',
+        ru: 'Наш подход к дизайну ориентирован не на моду, а на непреходящую ценность.',
+      },
+    },
+  ] satisfies AboutValue[],
 };
-
-/** A Services entry (service or process stage), complete in every locale. */
-type Complete<T = string> = Record<Locale, T>;
 
 interface ServiceItem {
   title: Complete;

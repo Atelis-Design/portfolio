@@ -181,6 +181,31 @@ const items: RouteKey[] = ['projects', 'services', 'about', 'contact'];
     }
   }
 
+  /*
+   * Tablet band (48–64em): the single row is at its narrowest here, and with the
+   * longer labels (TR "Hakkımızda", DE, RU) the last item used to wrap onto a
+   * second line, making the header taller than --header-height. A slightly
+   * smaller wordmark, tighter gaps and type keep one row in every locale.
+   */
+  @media (min-width: 48em) and (max-width: 63.99em) {
+    .site-header__inner {
+      column-gap: var(--space-md);
+    }
+
+    .site-header__wordmark {
+      width: 170px;
+    }
+
+    .site-header__nav ul {
+      column-gap: var(--space-md);
+    }
+
+    .site-header__nav a {
+      font-size: 0.8125rem;
+      letter-spacing: 0.06em;
+    }
+  }
+
   @media (min-width: 64em) {
     .site-header__wordmark {
       width: 220px;

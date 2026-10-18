@@ -177,7 +177,7 @@ const en = {
 export type UiStrings = typeof en;
 
 const tr: UiStrings = {
-  nav: { home: 'Ana sayfa', projects: 'Projeler', services: 'Hizmetler', about: 'Hakkında', contact: 'İletişim' },
+  nav: { home: 'Ana sayfa', projects: 'Projeler', services: 'Hizmetler', about: 'Hakkımızda', contact: 'İletişim' },
   a11y: {
     skipToContent: 'İçeriğe geç',
     primaryNav: 'Ana menü',
