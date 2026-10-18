@@ -1,136 +1,445 @@
 ---
+/**
+ * About: editorial composition — the studio interior beside the About copy,
+ * then, under a hairline, the founder (portrait, name, biography) and the three
+ * studio values. Plain type on the page surface: no cards, no motion.
+ */
 import Photo from '../../../components/Photo.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { ABOUT, SITE, localize, viewImage } from '../../../data';
 import { localeStaticPaths, type Locale } from '../../../i18n/locales';
-import { localizedPath } from '../../../i18n/routes';
 import { useUi } from '../../../i18n/ui';
 
 export const getStaticPaths = localeStaticPaths;
 
 const locale = Astro.params.locale as Locale;
 const ui = useUi(locale);
-const portrait = ABOUT.portrait ? viewImage(ABOUT.portrait, locale, ABOUT.name) : null;
-const profile = localize(ABOUT.profile, locale);
-const studio = localize(ABOUT.studio, locale);
+const pad = (n: number) => String(n).padStart(2, '0');
+
+const kicker = localize(ABOUT.kicker, locale);
+const image = viewImage(ABOUT.image, locale, SITE.brand);
+const paragraphs = localize(ABOUT.paragraphs, locale);
+const founder = ABOUT.founder;
+const portrait = viewImage(founder.portrait, locale, founder.name);
+const values = ABOUT.values.map((value, i) => ({
+  number: pad(i + 1),
+  title: localize(value.title, locale),
+  text: localize(value.text, locale),
+}));
 ---
 
-<BaseLayout locale={locale} title={ui.nav.about} description={localize(ABOUT.meta.description, locale)} current="about">
-  <section class="about-head container grid" aria-labelledby="about-title">
-    <div class="about-head__portrait">
-      {
-        portrait ? (
-          <figure class="portrait">
-            <Photo image={portrait} sizes="(min-width: 64em) 40vw, 100vw" priority />
-          </figure>
-        ) : (
-          /* Reserved slot: the real portrait is added via ABOUT.portrait in src/data/pages.ts */
-          <div class="portrait portrait--reserved" aria-hidden="true" data-portrait-slot />
-        )
-      }
-    </div>
+<BaseLayout
+  locale={locale}
+  title={ui.nav.about}
+  description={localize(ABOUT.meta.description, locale)}
+  current="about"
+  ogImage={image.src}
+  ogImageAlt={image.alt}
+>
+  <div class="about">
+    <section class="about-intro" aria-labelledby="about-title">
+      <figure class="about-intro__media">
+        <Photo image={image} sizes="(min-width: 64em) 60vw, 100vw" priority />
+      </figure>
 
-    <div class="about-head__text">
-      <p class="eyebrow">{ui.nav.about} — {SITE.brand}</p>
-      <h1 class="about-head__title" id="about-title">{ABOUT.name}</h1>
-      <p class="statement">{localize(ABOUT.lead, locale)}</p>
-    </div>
-  </section>
+      <div class="about-intro__text">
+        <p class="about-kicker">{kicker}</p>
+        <h1 class="about-intro__title" id="about-title">{SITE.brand}</h1>
+        <span class="about-intro__rule" aria-hidden="true"></span>
+        <div class="about-intro__body">
+          {paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+        </div>
+      </div>
+    </section>
 
-  <section class="about-section section container grid" aria-labelledby="about-profile">
-    <h2 class="about-section__label eyebrow" id="about-profile">{ui.about.profile}</h2>
-    <div class="about-section__body prose">
-      {profile.map((paragraph) => <p>{paragraph}</p>)}
-    </div>
-  </section>
+    <div class="about-lower container">
+      <section class="founder" aria-labelledby="founder-name">
+        <figure class="founder__portrait">
+          <Photo image={portrait} sizes="(min-width: 64em) 11rem, (min-width: 40em) 13rem, 40vw" />
+        </figure>
+        <div class="founder__text">
+          <p class="about-kicker">{localize(founder.role, locale)}</p>
+          <h2 class="founder__name" id="founder-name">{founder.name}</h2>
+          <p class="founder__bio">{localize(founder.bio, locale)}</p>
+        </div>
+      </section>
 
-  <section class="about-section section container grid rule-top" aria-labelledby="about-studio">
-    <h2 class="about-section__label eyebrow" id="about-studio">{ui.about.studio}</h2>
-    <div class="about-section__body prose">
-      {studio.map((paragraph) => <p>{paragraph}</p>)}
+      <ol class="values" role="list">
+        {
+          values.map((value) => (
+            <li class="value">
+              <p class="value__index" aria-hidden="true">
+                {value.number}
+                <span class="value__index-line" />
+              </p>
+              <h2 class="value__title">{value.title}</h2>
+              <p class="value__text">{value.text}</p>
+            </li>
+          ))
+        }
+      </ol>
     </div>
-    <p class="about-section__links">
-      <a class="link-arrow" href={localizedPath(locale, 'projects')}>{ui.common.allProjects}</a>
-      <a class="link-arrow" href={localizedPath(locale, 'contact')}>{ui.common.getInTouch}</a>
-    </p>
-  </section>
+  </div>
 </BaseLayout>
 
 <style>
-  .about-head {
-    padding-top: var(--space-xl);
-    row-gap: var(--space-xl);
+  .about {
+    min-width: 0;
+    padding-top: var(--space-lg);
+    font-family: var(--font-brand);
   }
 
-  .portrait {
-    aspect-ratio: 4 / 5;
-    background: var(--color-surface-secondary);
+  .about-kicker {
+    font-size: var(--text-xs);
+    line-height: 1.4;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
   }
 
-  .portrait :global(img) {
+  /* Intro ----------------------------------------------------------------- */
+
+  .about-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-lg);
+    padding-inline: var(--gutter);
+  }
+
+  /* The frame reserves the space (no layout shift); the image is cropped, never distorted */
+  .about-intro__media {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: var(--color-placeholder);
+  }
+
+  .about-intro__media :global(img) {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: 45% 50%;
   }
 
-  /* Intentional empty frame: fine inset rule and architectural corner marks */
-  .portrait--reserved {
-    position: relative;
-    background:
-      linear-gradient(var(--color-rule), var(--color-rule)) left var(--space-lg) top var(--space-lg) / 1.5rem 1px no-repeat,
-      linear-gradient(var(--color-rule), var(--color-rule)) left var(--space-lg) top var(--space-lg) / 1px 1.5rem no-repeat,
-      linear-gradient(var(--color-rule), var(--color-rule)) right var(--space-lg) bottom var(--space-lg) / 1.5rem 1px no-repeat,
-      linear-gradient(var(--color-rule), var(--color-rule)) right var(--space-lg) bottom var(--space-lg) / 1px 1.5rem no-repeat,
-      var(--color-surface-secondary);
-    border: 1px solid var(--color-divider);
-  }
-
-  .about-head__text {
+  .about-intro__text {
     display: grid;
-    gap: var(--space-md);
-    align-content: end;
+    justify-items: start;
+    align-content: center;
+    max-width: 44rem;
   }
 
-  .about-head__title {
-    font-size: var(--text-2xl);
+  .about-intro__title {
+    margin-top: var(--space-xs);
+    font-size: clamp(2.5rem, 1.7rem + 2.4vw, 4rem);
+    line-height: 1.02;
+    letter-spacing: 0.01em;
   }
 
-  .about-section {
-    row-gap: var(--space-lg);
+  .about-intro__rule {
+    width: clamp(2.5rem, 4vw, 3.75rem);
+    height: 1px;
+    margin-block: var(--space-md);
+    background: var(--color-text-secondary);
   }
 
-  .about-section__links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-md) var(--space-xl);
+  .about-intro__body {
+    display: grid;
+    gap: 1em;
+    font-size: clamp(1.125rem, 0.95rem + 0.35vw, 1.3125rem);
+    line-height: 1.42;
+    color: var(--color-text-secondary);
   }
 
-  @media (min-width: 40em) and (max-width: 63.99em) {
-    .about-head__portrait {
-      grid-column: 1 / span 8;
-    }
-  }
-
+  /*
+   * Two columns: the image runs from the viewport's left edge; the copy sits on
+   * the page's right edge (the container's, once wider than --max-width).
+   */
   @media (min-width: 64em) {
-    .about-head {
-      align-items: end;
+    .about {
+      padding-top: 0;
     }
 
-    .about-head__portrait {
-      grid-column: 1 / span 5;
+    .about-intro {
+      grid-template-columns: minmax(0, 60fr) minmax(0, 40fr);
+      column-gap: var(--space-xl);
+      padding-left: 0;
+      padding-right: max(var(--gutter), calc(50% - var(--max-width) / 2 + var(--gutter)));
     }
 
-    .about-head__text {
-      grid-column: 7 / span 6;
+    .about-intro__media {
+      /* Matches the copy's height, never shallower than a 16:9-like frame */
+      aspect-ratio: auto;
+      min-height: clamp(22rem, 34vw, 40rem);
     }
 
-    .about-section__label {
-      grid-column: 1 / span 3;
+    .about-intro__text {
+      padding-block: var(--space-md);
+    }
+  }
+
+  /* Founder and values ---------------------------------------------------- */
+
+  .about-lower {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-lg) var(--grid-gap);
+    margin-top: var(--space-lg);
+  }
+
+  /* The hairline spans the content width, inside the container's gutters */
+  .about-lower::before {
+    content: '';
+    grid-column: 1 / -1;
+    border-top: var(--rule);
+  }
+
+  .founder {
+    display: grid;
+    grid-template-columns: minmax(7rem, 2fr) minmax(0, 3fr);
+    gap: var(--space-md);
+    align-items: start;
+    min-width: 0;
+  }
+
+  /* Natural 4:5 portrait crop, weighted to the face */
+  .founder__portrait {
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--color-placeholder);
+  }
+
+  .founder__portrait :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 30%;
+  }
+
+  .founder__text {
+    display: grid;
+    align-content: start;
+    min-width: 0;
+  }
+
+  .founder__name {
+    margin-top: var(--space-2xs);
+    font-size: clamp(1.75rem, 1.2rem + 1.4vw, 2.5rem);
+    line-height: 1.05;
+  }
+
+  .founder__bio {
+    margin-top: var(--space-sm);
+    font-size: clamp(1.0625rem, 0.9rem + 0.3vw, 1.1875rem);
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+  }
+
+  .values {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-lg) var(--grid-gap);
+  }
+
+  .value {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: var(--space-xs);
+    min-width: 0;
+  }
+
+  .value__index {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-numeric);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums lining-nums;
+    color: var(--color-text-secondary);
+  }
+
+  .value__index-line {
+    width: clamp(2rem, 3vw, 2.5rem);
+    height: 1px;
+    background: currentColor;
+    opacity: 0.5;
+  }
+
+  .value__title {
+    font-size: clamp(0.9375rem, 0.8rem + 0.3vw, 1.0625rem);
+    line-height: 1.3;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  .value__text {
+    font-size: clamp(1rem, 0.88rem + 0.25vw, 1.125rem);
+    line-height: 1.38;
+    color: var(--color-text-muted);
+    /* Long compounds (DE) in narrow value columns */
+    hyphens: auto;
+  }
+
+  /* Tablet: founder above, the three values in a row beneath */
+  @media (min-width: 40em) {
+    .founder {
+      grid-template-columns: 13rem minmax(0, 1fr);
+      gap: var(--space-lg);
+      align-items: center;
     }
 
-    .about-section__body,
-    .about-section__links {
-      grid-column: 7 / span 5;
+    .values {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .value + .value {
+      padding-left: var(--grid-gap);
+      border-left: var(--rule);
+    }
+  }
+
+  /*
+   * Wide desktop: four editorial groups in one band — portrait and biography,
+   * then the three values. The band runs from the hairline down to the footer;
+   * full-height dividers frame each value. The values share subgrid rows
+   * (number, title, text) so their baselines line up, centred as one group.
+   * Below this width the tablet stack keeps value titles whole.
+   */
+  @media (min-width: 80em) {
+    .about-lower {
+      --band-pad: var(--space-md);
+      --value-pad: clamp(1.25rem, 1.8vw, 2.25rem);
+      grid-template-columns: minmax(0, 40fr) minmax(0, 60fr);
+      row-gap: 0;
+      column-gap: 0;
+      align-items: stretch;
+    }
+
+    .founder {
+      grid-template-columns: clamp(6.25rem, 13vh, 9rem) minmax(0, 1fr);
+      gap: clamp(1.25rem, 1.8vw, 2rem);
+      align-items: center;
+      padding-block: var(--band-pad);
+      padding-right: var(--value-pad);
+    }
+
+    .founder__text {
+      align-content: center;
+    }
+
+    .founder__bio {
+      max-width: 32rem;
+    }
+
+    .values {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: 1fr auto auto auto 1fr;
+      row-gap: 0;
+      column-gap: 0;
+    }
+
+    .value,
+    .value + .value {
+      grid-row: 1 / -1;
+      grid-template-rows: subgrid;
+      gap: 0;
+      padding: var(--band-pad) var(--value-pad);
+      border-left: var(--rule);
+    }
+
+    .value__index {
+      grid-row: 2;
+    }
+
+    .value__title {
+      grid-row: 3;
+      margin-top: var(--space-xs);
+      font-size: 0.9375rem;
+      letter-spacing: 0.1em;
+    }
+
+    .value__text {
+      grid-row: 4;
+      margin-top: var(--space-xs);
+    }
+  }
+
+  /* One desktop viewport ---------------------------------------------------- */
+
+  /*
+   * As on Services: the page meets the global footer directly (its top gap is
+   * replaced by this page's own bottom padding) and spacing, type and the
+   * portrait follow the viewport height, so header, page and footer share one
+   * screen where the copy allows. The image grows into whatever height is left;
+   * nothing has a fixed height, so longer copy or short screens simply scroll.
+   */
+  @media (min-width: 80em) and (min-height: 40em) {
+    :global(main:has(> .about)) {
+      display: grid;
+      margin-bottom: calc(-1 * var(--space-xl));
+    }
+
+    .about {
+      --about-gap: clamp(0.75rem, 2.2vh, 2rem);
+      display: flex;
+      flex-direction: column;
+      /* 2px: the header and footer hairlines sit outside their height tokens */
+      min-height: calc(100svh - var(--header-height) - var(--footer-height) - 2px);
+    }
+
+    /* A little more room for the copy, so it needs fewer lines */
+    .about-intro {
+      flex: 1 0 auto;
+      grid-template-columns: minmax(0, 56fr) minmax(0, 44fr);
+    }
+
+    .about-intro__media {
+      min-height: clamp(16rem, 38vh, 36rem);
+    }
+
+    .about-intro__text {
+      padding-block: var(--about-gap) 0;
+    }
+
+    .about-intro__title {
+      margin-top: var(--space-2xs);
+      font-size: clamp(2.25rem, 0.8rem + 3.6vh, 3.75rem);
+    }
+
+    .about-intro__rule {
+      margin-block: clamp(0.5rem, 1.6vh, 1.25rem);
+    }
+
+    .about-intro__body {
+      gap: 0.75em;
+      font-size: clamp(0.9375rem, 0.5rem + 1.05vh, 1.25rem);
+      line-height: 1.38;
+    }
+
+    /* The band's own padding replaces the page's bottom gap: dividers meet the footer rule */
+    .about-lower {
+      --band-pad: clamp(0.75rem, 2.4vh, 2rem);
+      margin-top: var(--about-gap);
+    }
+
+    .founder__name {
+      font-size: clamp(1.5rem, 0.6rem + 2.2vh, 2.25rem);
+    }
+
+    .founder__bio {
+      margin-top: var(--space-xs);
+      font-size: clamp(0.9375rem, 0.55rem + 0.9vh, 1.125rem);
+      line-height: 1.36;
+    }
+
+    .value__text {
+      font-size: clamp(0.9375rem, 0.6rem + 0.75vh, 1.0625rem);
+      line-height: 1.34;
     }
   }
 </style>
