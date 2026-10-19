@@ -125,6 +125,7 @@ const messageError = format(t.invalid.message, { min: CONTACT_LIMITS.messageMin 
 
 <script>
   import { CONTACT_FIELDS, HONEYPOT_FIELD, validateContact } from '../lib/contact';
+  import { fetchWithTimeout } from '../lib/fetchWithTimeout';
 
   /** Longer than the endpoint's worst case, so a slow success is never reported as a failure. */
   const REQUEST_TIMEOUT_MS = 20000;
@@ -209,12 +210,15 @@ const messageError = format(t.invalid.message, { min: CONTACT_LIMITS.messageMin 
       form.dataset.state = 'sending';
       setSending(true);
       try {
-        const response = await fetch(form.action, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ ...result.data, [HONEYPOT_FIELD]: control(HONEYPOT_FIELD)?.value ?? '' }),
-          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        });
+        const response = await fetchWithTimeout(
+          form.action,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ ...result.data, [HONEYPOT_FIELD]: control(HONEYPOT_FIELD)?.value ?? '' }),
+          },
+          REQUEST_TIMEOUT_MS,
+        );
         const body: unknown = await response.json().catch(() => null);
         const accepted = response.ok && typeof body === 'object' && body !== null && 'ok' in body && body.ok === true;
         if (!accepted) throw new Error(`Contact endpoint answered ${response.status}`);
