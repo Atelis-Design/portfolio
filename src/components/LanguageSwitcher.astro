@@ -59,8 +59,13 @@ const ui = useUi(locale);
       if (details.open && !details.contains(event.target as Node)) details.open = false;
     });
 
+    // Only close when focus moves to another element. Safari does not focus links on
+    // tap/click, so pressing a language link blurs the summary with no relatedTarget;
+    // closing then would hide the link before its click lands. Outside taps are
+    // handled by the click listener above.
     details.addEventListener('focusout', (event) => {
-      if (details.open && !details.contains(event.relatedTarget as Node | null)) details.open = false;
+      const next = event.relatedTarget;
+      if (details.open && next instanceof Node && !details.contains(next)) details.open = false;
     });
   });
 </script>
