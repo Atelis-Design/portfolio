@@ -16,4 +16,3 @@ test('focusout does not close the menu when focus moves nowhere (Safari link tap
   // the handler must require a real next element before closing.
   assert.match(handler[0], /instanceof Node/);
 });
-
